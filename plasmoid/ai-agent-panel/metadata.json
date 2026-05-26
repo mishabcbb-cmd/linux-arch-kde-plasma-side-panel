@@ -1,0 +1,25 @@
+{
+    "KPlugin": {
+        "Id": "org.kde.plasma.ai-agent-panel",
+        "Name": "AI Agent Panel",
+        "Description": "AI coding agent integrated into the KDE Plasma desktop. Chat with Claude or local Ollama models to read, write, search, and test code from your desktop.",
+        "Icon": "assistant",
+        "Authors": [
+            {
+                "Name": "KDE AI Agent",
+                "Email": "ai-agent@kde.org"
+            }
+        ],
+        "Category": "Utilities",
+        "License": "GPL-3.0",
+        "Version": "0.1.0",
+        "Website": "https://github.com/kde-ai-agent/kde-ai-agent",
+        "BugReportUrl": "https://github.com/kde-ai-agent/kde-ai-agent/issues",
+        "Copyright": "© 2026 KDE AI Agent Contributors"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "X-Plasma-ConfigUi-File": "config/config.qml"
+}
