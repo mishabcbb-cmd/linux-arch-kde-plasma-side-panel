@@ -30,19 +30,29 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 
-class OllamaEmbeddingFunction:
+try:
+    from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
+    HAS_CHROMADB_TYPES = True
+except ImportError:
+    HAS_CHROMADB_TYPES = False
+    # Define fallback types for when chromadb is not installed
+    Documents = List[str]
+    Embeddings = List[List[float]]
+
+
+class OllamaEmbeddingFunction(EmbeddingFunction[Documents]):
     """Embedding function using Ollama's nomic-embed-text model."""
 
     def __init__(self, host: str = "http://localhost:11434", model: str = "nomic-embed-text"):
         self.host = host.rstrip("/")
         self.model = model
 
-    def __call__(self, texts: List[str]) -> List[List[float]]:
+    def __call__(self, input: Documents) -> Embeddings:
         """Generate embeddings for a list of texts."""
         import urllib.request
 
         embeddings = []
-        for text in texts:
+        for text in input:
             try:
                 payload = json.dumps({
                     "model": self.model,
@@ -61,8 +71,11 @@ class OllamaEmbeddingFunction:
                 embeddings.append([0.0] * 768)  # Fallback zero vector
         return embeddings
 
+    def name(self) -> str:
+        return f"ollama-{self.model}"
 
-class SentenceTransformerEmbeddingFunction:
+
+class SentenceTransformerEmbeddingFunction(EmbeddingFunction[Documents]):
     """Fallback embedding function using sentence-transformers."""
 
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
@@ -79,15 +92,18 @@ class SentenceTransformerEmbeddingFunction:
                 logger.error("sentence-transformers not installed")
                 raise
 
-    def __call__(self, texts: List[str]) -> List[List[float]]:
+    def __call__(self, input: Documents) -> Embeddings:
         self._lazy_load()
         if self._model is None:
-            return [[0.0] * 384 for _ in texts]
-        embeddings = self._model.encode(texts, show_progress_bar=False)
+            return [[0.0] * 384 for _ in input]
+        embeddings = self._model.encode(input, show_progress_bar=False)
         return embeddings.tolist()
 
+    def name(self) -> str:
+        return f"sentence-transformers-{self.model_name}"
 
-class HybridEmbeddingFunction:
+
+class HybridEmbeddingFunction(EmbeddingFunction[Documents]):
     """Hybrid embedding: try Ollama first, fall back to sentence-transformers."""
 
     def __init__(
@@ -99,12 +115,15 @@ class HybridEmbeddingFunction:
         self._primary = OllamaEmbeddingFunction(ollama_host, ollama_model)
         self._fallback = SentenceTransformerEmbeddingFunction(fallback_model)
 
-    def __call__(self, texts: List[str]) -> List[List[float]]:
+    def __call__(self, input: Documents) -> Embeddings:
         try:
-            return self._primary(texts)
+            return self._primary(input)
         except Exception:
             logger.warning("Ollama embedding failed, using sentence-transformers fallback")
-            return self._fallback(texts)
+            return self._fallback(input)
+
+    def name(self) -> str:
+        return f"hybrid-{self._primary.model}-{self._fallback.model_name}"
 
 
 # ============================================================================
