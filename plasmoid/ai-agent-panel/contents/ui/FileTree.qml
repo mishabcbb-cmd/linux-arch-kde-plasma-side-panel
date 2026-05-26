@@ -19,6 +19,7 @@ import org.kde.kirigami as Kirigami
 import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as Plasma5Support
+import QtQuick.Controls as QQC2
 
 ColumnLayout {
     id: fileTreeRoot
@@ -276,7 +277,7 @@ ColumnLayout {
     }
 
     // ── File list ──
-    PlasmaExtras.ScrollArea {
+    QQC2.ScrollView {
         Layout.fillWidth: true
         Layout.fillHeight: true
         clip: true

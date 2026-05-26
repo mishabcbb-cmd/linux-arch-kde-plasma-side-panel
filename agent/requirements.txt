@@ -9,6 +9,7 @@ anthropic>=0.39.0         # Anthropic Claude API (streaming + tool use)
 # System Integration
 dbus-python>=1.3.2        # D-Bus session bus for QML/KDE communication
 PyGObject>=3.48.0         # GLib main loop for D-Bus service
+PyQt6>=6.8.0              # Qt6 bindings for side panel window
 watchdog>=5.0.0           # File system monitoring (context file changes)
 
 # Code Intelligence

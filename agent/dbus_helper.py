@@ -61,6 +61,13 @@ def main():
         proxy.StopTask()
         print("OK: Task stopped")
 
+    elif command == "launch_panel":
+        import subprocess
+        panel_script = os.path.join(os.path.dirname(__file__), "side_panel.py")
+        subprocess.Popen([sys.executable, panel_script],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("OK: Side panel launched")
+
     elif command == "provide_response":
         if len(sys.argv) < 3:
             print("Usage: dbus_helper.py provide_response <response>", file=sys.stderr)

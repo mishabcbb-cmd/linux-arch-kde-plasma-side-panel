@@ -151,11 +151,16 @@ PlasmoidItem {
 
     // ──────────────────────────────────────────────
     // Compact Representation — shown in panel
+    // Launches the side panel window
     // ──────────────────────────────────────────────
     compactRepresentation: PlasmaComponents.Button {
         icon.name: "assistant"
         text: "AI Agent"
-        onClicked: root.expanded = !root.expanded
+        onClicked: {
+            // Launch side panel window via D-Bus helper
+            var cmd = "/usr/bin/python3 " + plasmoid.file("ui", "dbus_helper.py") + " launch_panel"
+            dbusSource.connectSource("python3", cmd)
+        }
 
         PlasmaCore.ToolTipArea {
             anchors.fill: parent
