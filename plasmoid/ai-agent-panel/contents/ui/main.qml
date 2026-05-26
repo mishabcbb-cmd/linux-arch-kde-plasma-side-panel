@@ -256,16 +256,25 @@ PlasmoidItem {
         Kirigami.OverlayDrawer {
             id: fileTreeDrawer
             edge: Qt.RightEdge
-            width: Kirigami.Units.gridUnit * 12
+            width: Kirigami.Units.gridUnit * 14
             height: parent.height
 
             FileTree {
                 id: fileTree
                 anchors.fill: parent
-                workingDir: ""
+                workingDir: plasmoid.configuration.workingDir || "~"
 
                 onFileSelected: function(filePath) {
                     taskInput.addFileContext(filePath)
+                }
+
+                onFilesSelected: function(filePaths) {
+                    for (var i = 0; i < filePaths.length; i++) {
+                        if (root.contextFiles.indexOf(filePaths[i]) === -1) {
+                            root.contextFiles.push(filePaths[i])
+                        }
+                    }
+                    root.contextFilesChanged()
                     fileTreeDrawer.close()
                 }
             }

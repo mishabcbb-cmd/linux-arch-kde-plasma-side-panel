@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+    <kcfgfile name=""/>
+    <group name="General">
+        <!-- API Configuration -->
+        <entry name="apiProvider" type="String">
+            <label>LLM provider: claude, ollama, openrouter, openai</label>
+            <default>claude</default>
+        </entry>
+        <entry name="apiKey" type="String">
+            <label>API key for Claude or OpenRouter</label>
+            <default></default>
+        </entry>
+        <entry name="model" type="String">
+            <label>Model identifier</label>
+            <default>claude-sonnet-4-20250514</default>
+        </entry>
+        <entry name="ollamaHost" type="String">
+            <label>Ollama host URL</label>
+            <default>http://localhost:11434</default>
+        </entry>
+        <entry name="ollamaModel" type="String">
+            <label>Ollama model name</label>
+            <default>llama3.2</default>
+        </entry>
+        <entry name="temperature" type="Double">
+            <label>LLM temperature (0.0–1.0)</label>
+            <default>0.7</default>
+        </entry>
+
+        <!-- Working Directory -->
+        <entry name="workingDir" type="String">
+            <label>Working directory for agent operations</label>
+            <default>~</default>
+        </entry>
+        <entry name="autoCommit" type="Bool">
+            <label>Auto-commit after file writes</label>
+            <default>true</default>
+        </entry>
+
+        <!-- Token Limits -->
+        <entry name="maxInputTokens" type="Int">
+            <label>Maximum input tokens</label>
+            <default>100000</default>
+        </entry>
+        <entry name="maxOutputTokens" type="Int">
+            <label>Maximum output tokens</label>
+            <default>8192</default>
+        </entry>
+
+        <!-- OpenObserve -->
+        <entry name="ooEndpoint" type="String">
+            <label>OpenObserve endpoint URL</label>
+            <default></default>
+        </entry>
+        <entry name="ooStream" type="String">
+            <label>OpenObserve stream name</label>
+            <default>ai-agent-events</default>
+        </entry>
+
+        <!-- Agent Limits -->
+        <entry name="maxIterations" type="Int">
+            <label>Maximum ReAct iterations</label>
+            <default>50</default>
+        </entry>
+
+        <!-- FileTree State -->
+        <entry name="fileTreeRoot" type="String">
+            <label>Last browsed directory in FileTree</label>
+            <default>~</default>
+        </entry>
+    </group>
+</kcfg>

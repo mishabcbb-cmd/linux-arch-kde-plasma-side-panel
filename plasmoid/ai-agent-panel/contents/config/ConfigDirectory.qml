@@ -1,5 +1,7 @@
 /*
  * contents/config/ConfigDirectory.qml — Working directory configuration.
+ *
+ * All fields bound to Plasmoid.configuration for persistence.
  */
 
 import QtQuick 2.15
@@ -7,6 +9,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import org.kde.kirigami 2.20 as Kirigami
 import org.kde.plasma.components 3.0 as PlasmaComponents
+import org.kde.plasma.plasmoid
 
 Item {
     id: configDirRoot
@@ -43,9 +46,10 @@ Item {
 
                     PlasmaComponents.TextField {
                         id: workingDirField
-                        text: "~"
+                        text: plasmoid.configuration.workingDir || "~"
                         placeholderText: "~/projects/my-project"
                         Layout.fillWidth: true
+                        onTextChanged: plasmoid.configuration.workingDir = text
                     }
 
                     PlasmaComponents.Button {
@@ -78,7 +82,8 @@ Item {
 
                     PlasmaComponents.Switch {
                         id: autoCommitSwitch
-                        checked: true
+                        checked: plasmoid.configuration.autoCommit !== false
+                        onCheckedChanged: plasmoid.configuration.autoCommit = checked
                     }
 
                     Label {
@@ -111,6 +116,7 @@ Item {
                 path = path.substring(7)
             }
             workingDirField.text = path
+            plasmoid.configuration.workingDir = path
         }
     }
 }

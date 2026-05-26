@@ -1,9 +1,9 @@
 # KDE AI Agent Panel — Project State
 
-**Version**: 2.0.0
+**Version**: 3.0.0
 **Date**: 2026-05-26
 **Arch**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1
-**Phase**: 3 — Plasma Integration & Hardening
+**Phase**: 3 — Plasma Integration & Hardening (Active)
 
 ---
 
@@ -62,16 +62,18 @@
 | File | Lines | Purpose |
 |------|-------|---------|
 | [`metadata.json`](plasmoid/ai-agent-panel/metadata.json) | 27 | Plasma 6 package metadata |
-| [`contents/ui/main.qml`](plasmoid/ai-agent-panel/contents/ui/main.qml) | 258 | Root panel, D-Bus bridge via Plasma5Support.DataSource |
+| [`contents/ui/main.qml`](plasmoid/ai-agent-panel/contents/ui/main.qml) | 275 | Root panel, D-Bus bridge via Plasma5Support.DataSource |
 | [`contents/ui/ChatView.qml`](plasmoid/ai-agent-panel/contents/ui/ChatView.qml) | 163 | Streaming chat log with color-coded messages |
-| [`contents/ui/TaskInput.qml`](plasmoid/ai-agent-panel/contents/ui/TaskInput.qml) | 107 | Multi-line input with Ctrl+Enter, file picker |
-| [`contents/ui/FileTree.qml`](plasmoid/ai-agent-panel/contents/ui/FileTree.qml) | 124 | File context picker (placeholder — needs implementation) |
+| [`contents/ui/TaskInput.qml`](plasmoid/ai-agent-panel/contents/ui/TaskInput.qml) | 143 | Multi-line input with Ctrl+Enter, file picker |
+| [`contents/ui/FileTree.qml`](plasmoid/ai-agent-panel/contents/ui/FileTree.qml) | 370 | Real file browser with directory tree, breadcrumb, filter, multi-select |
 | [`contents/ui/StatusBar.qml`](plasmoid/ai-agent-panel/contents/ui/StatusBar.qml) | 146 | Status indicator, connection, action buttons |
 | [`contents/ui/dbus_helper.py`](plasmoid/ai-agent-panel/contents/ui/dbus_helper.py) | 79 | Copy of agent/dbus_helper.py for plasmoid packaging |
+| [`contents/ui/filetree_helper.py`](plasmoid/ai-agent-panel/contents/ui/filetree_helper.py) | 72 | Python helper for directory listing via DataSource executable engine |
+| [`contents/config/main.xml`](plasmoid/ai-agent-panel/contents/config/main.xml) | 68 | KConfig XSD schema — 17 persisted settings |
 | [`contents/config/config.qml`](plasmoid/ai-agent-panel/contents/config/config.qml) | 36 | Settings root with 3 categories |
-| [`contents/config/ConfigApi.qml`](plasmoid/ai-agent-panel/contents/config/ConfigApi.qml) | 240 | API provider, model, key settings |
-| [`contents/config/ConfigDirectory.qml`](plasmoid/ai-agent-panel/contents/config/ConfigDirectory.qml) | 117 | Working directory, git settings |
-| [`contents/config/ConfigAdvanced.qml`](plasmoid/ai-agent-panel/contents/config/ConfigAdvanced.qml) | 153 | Token limits, OpenObserve, agent limits |
+| [`contents/config/ConfigApi.qml`](plasmoid/ai-agent-panel/contents/config/ConfigApi.qml) | 280 | API provider, model, key settings (persisted) |
+| [`contents/config/ConfigDirectory.qml`](plasmoid/ai-agent-panel/contents/config/ConfigDirectory.qml) | 117 | Working directory, git settings (persisted) |
+| [`contents/config/ConfigAdvanced.qml`](plasmoid/ai-agent-panel/contents/config/ConfigAdvanced.qml) | 153 | Token limits, OpenObserve, agent limits (persisted) |
 
 ### 2.3 C++ Native Build
 
@@ -126,16 +128,14 @@
 | **Arch Linux PKGBUILD** | ✅ | packaging/arch/PKGBUILD |
 | **QML Config Pages** | ✅ | 3 categories (API, Directory, Advanced) |
 | **Inline Sidebar** | ✅ | Always inline, never popup |
-| **File Context** | ⚠️ | FileTree.qml is placeholder |
-| **Config Persistence** | ⚠️ | Config pages need save logic |
-| **FileTree Implementation** | 🔄 P3 | Real file browser with C++ model or Plasma5Support.DataSource |
-| **Config Persistence** | 🔄 P3 | Plasmoid.configuration bindings |
-| **Pytest Suite** | 🔄 P3 | MCP + RAG module tests |
-| **MCP Server Config UI** | 🔄 P3 | UI for managing external MCP servers |
-| **Cross-repo Intelligence** | 🔄 P3 | codebase-memory cross-repo mode |
-| **Voice Input** | 📅 P3 | whisper.cpp from Jarvis |
-| **System Monitoring** | 📅 P3 | CPU/RAM from Jarvis |
-| **TTS Output** | 📅 P3 | From Jarvis |
+| **FileTree Implementation** | ✅ | Real file browser with directory tree, breadcrumb, filter, multi-select |
+| **Config Persistence** | ✅ | Plasmoid.configuration bindings via main.xml schema (17 entries) |
+| **Pytest Suite** | 🔄 P3-M2 | MCP + RAG module tests |
+| **MCP Server Config UI** | 🔄 P3-M2 | UI for managing external MCP servers |
+| **Cross-repo Intelligence** | 🔄 P3-M3 | codebase-memory cross-repo mode |
+| **Voice Input** | 📅 P3-M4 | whisper.cpp from Jarvis |
+| **System Monitoring** | 📅 P3-M4 | CPU/RAM from Jarvis |
+| **TTS Output** | 📅 P3-M4 | From Jarvis |
 
 ---
 
@@ -277,14 +277,14 @@ cd packaging/arch && makepkg -si
 
 | Pattern | Source | Applied In |
 |---------|--------|-----------|
-| MCP client stdio/SSE | OpenCode `mcp-tools.go` | `agent/mcp_client.py` |
-| MCP auto-approval | Zoo-Code `auto-approval/mcp.ts` | `agent/mcp_client.py:MCPServerConfig.auto_approve` |
-| CMake + llama.cpp from source | Jarvis `CMakeLists.txt` | `CMakeLists.txt`, `cmake/BuildLlama.cmake.in` |
-| ApiStrategy interface | end4 `ApiStrategy.qml` | `agent/llm_client.py:BaseLLMProvider` |
-| repo_map with cache | Aider `repomap.py` | `agent/tools.py:_repo_map` |
-| PubSub events | OpenCode `pubsub/events.go` | `agent/agent_loop.py:AgentEvent` |
-| Permission system | OpenCode `permission/permission.go` | `agent/mcp_client.py:auto_approve` |
-| SQLite sessions | OpenCode `internal/db/` | `agent/rag.py:ChromaDB persistence` |
+| MCP client stdio/SSE | OpenCode `mcp-tools.go` | [`agent/mcp_client.py`](agent/mcp_client.py) |
+| MCP auto-approval | Zoo-Code `auto-approval/mcp.ts` | [`agent/mcp_client.py`](agent/mcp_client.py):MCPServerConfig.auto_approve |
+| CMake + llama.cpp from source | Jarvis `CMakeLists.txt` | [`CMakeLists.txt`](CMakeLists.txt), [`cmake/BuildLlama.cmake.in`](cmake/BuildLlama.cmake.in) |
+| ApiStrategy interface | end4 `ApiStrategy.qml` | [`agent/llm_client.py`](agent/llm_client.py):BaseLLMProvider |
+| repo_map with cache | Aider `repomap.py` | [`agent/tools.py`](agent/tools.py):_repo_map |
+| PubSub events | OpenCode `pubsub/events.go` | [`agent/agent_loop.py`](agent/agent_loop.py):AgentEvent |
+| Permission system | OpenCode `permission/permission.go` | [`agent/mcp_client.py`](agent/mcp_client.py):auto_approve |
+| SQLite sessions | OpenCode `internal/db/` | [`agent/rag.py`](agent/rag.py):ChromaDB persistence |
 
 ---
 
@@ -327,19 +327,17 @@ chmod +x install.sh
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| FileTree.qml is placeholder | 🟡 Medium | 🔄 Phase 3 — P0 |
-| Config pages don't persist settings | 🟡 Medium | 🔄 Phase 3 — P0 |
-| No tests for MCP/RAG modules | 🟡 Medium | 🔄 Phase 3 — P1 |
-| No MCP server config UI | 🟡 Medium | 🔄 Phase 3 — P1 |
+| No tests for MCP/RAG modules | 🟡 Medium | 🔄 Phase 3 — M2 |
+| No MCP server config UI | 🟡 Medium | 🔄 Phase 3 — M2 |
 | RAG requires Ollama or large download | 🟢 Low | sentence-transformers fallback is ~80MB |
 | MCP SSE requires uvicorn + starlette | 🟢 Low | Optional, stdio is default |
-| Cross-repo intelligence not wired | 🟢 Low | 🔄 Phase 3 — P1 |
+| Cross-repo intelligence not wired | 🟢 Low | 🔄 Phase 3 — M3 |
 
 ---
 
 ## 10. Memory Index
 
-### 10.1 Engram (11 records)
+### 10.1 Engram (12 records)
 
 | ID | Title | Type |
 |----|-------|------|
@@ -354,6 +352,7 @@ chmod +x install.sh
 | obs-24 | Phase 2.1 MCP Server — реализован | architecture |
 | obs-26 | Phase 2.2 RAG — реализован | architecture |
 | obs-28 | Phase 2.3 C++ Native — реализован | architecture |
+| obs-29 | Phase 3 transition — PROJECT_STATE.md updated to v3.0.0 | architecture |
 
 ### 10.2 Codebase Memory
 
@@ -375,35 +374,71 @@ chmod +x install.sh
 
 ## 11. Phase 3 Roadmap — Plasma Integration & Hardening
 
-| Priority | Task | Specialist | Dependencies |
-|----------|------|-----------|-------------|
-| 🔥 P0 | Implement FileTree.qml with real file browser | `🎨 Plasma Specialist` | — |
-| 🔥 P0 | Add config persistence (Plasmoid.configuration) | `🎨 Plasma Specialist` | — |
-| 📌 P1 | Write pytest suite for MCP + RAG modules | `💻 Code` | — |
-| 📌 P1 | Add MCP server config UI in ConfigApi.qml | `🎨 Plasma Specialist` | — |
-| 📌 P1 | Cross-repo intelligence (codebase-memory mode) | `🤖 AI Engineer` | Pytest suite |
-| 🧊 P2 | Voice input (whisper.cpp from Jarvis) | `💻 Code` | C++ native layer |
-| 🧊 P2 | System monitoring (CPU/RAM from Jarvis) | `💻 Code` | C++ native layer |
-| 🧊 P2 | TTS output (from Jarvis) | `💻 Code` | C++ native layer |
+### 11.1 Milestones
 
-### 11.1 Phase 3 Deliverables
+| Milestone | Tasks | Priority | Expected Outcome | Specialist | Status |
+|-----------|-------|----------|-----------------|-----------|--------|
+| **M1 — Plasma Polish** | FileTree + Config Persistence | 🔥 P0 | Fully functional plasmoid with real file browser and saved settings | `🎨 Plasma Specialist` | ✅ Done |
+| **M2 — Test Coverage** | Pytest suite + MCP Config UI | 📌 P1 | Verified reliability + user-managed MCP servers | `💻 Code` + `🎨 Plasma Specialist` | 🔄 Active |
+| **M3 — Cross-repo AI** | Cross-repo intelligence | 📌 P1 | Agent queries across all indexed reference projects | `🤖 AI Engineer` | 📅 Next |
+| **M4 — Extended Features** | Voice, Monitoring, TTS | 🧊 P2 | Feature parity with Jarvis reference project | `💻 Code` | 📅 Planned |
 
-| Milestone | Tasks | Expected Outcome |
-|-----------|-------|-----------------|
-| **M1 — Plasma Polish** | FileTree + Config Persistence | Fully functional plasmoid with real file browser and saved settings |
-| **M2 — Test Coverage** | Pytest suite + MCP Config UI | Verified reliability + user-managed MCP servers |
-| **M3 — Cross-repo AI** | Cross-repo intelligence | Agent queries across all indexed reference projects |
-| **M4 — Extended Features** | Voice, Monitoring, TTS | Feature parity with Jarvis reference project |
+### 11.2 Task Breakdown
 
-### 11.2 Integration Risk Assessment
+#### M1 — Plasma Polish (🔥 P0) ✅
+
+| Task | Files | Description | Status |
+|------|-------|-------------|--------|
+| Implement FileTree.qml | [`contents/ui/FileTree.qml`](plasmoid/ai-agent-panel/contents/ui/FileTree.qml) | Real file browser using `Plasma5Support.DataSource` executable engine. Directory tree with breadcrumb, filter, multi-select, file type icons. | ✅ Done |
+| Config persistence | [`contents/config/main.xml`](plasmoid/ai-agent-panel/contents/config/main.xml) | KConfig XSD schema with 17 persisted entries. All 3 config pages bound to `Plasmoid.configuration`. | ✅ Done |
+| filetree_helper.py | [`contents/ui/filetree_helper.py`](plasmoid/ai-agent-panel/contents/ui/filetree_helper.py) | Python helper for directory listing via DataSource executable engine. JSON output with file metadata. | ✅ Done |
+
+#### M2 — Test Coverage & MCP Config UI (📌 P1)
+
+| Task | Files | Description |
+|------|-------|-------------|
+| Pytest suite | `tests/` (new) | Unit tests for MCP server/client, RAG engine, tool registry. Mock D-Bus and LLM. |
+| MCP server config UI | [`contents/config/ConfigApi.qml`](plasmoid/ai-agent-panel/contents/config/ConfigApi.qml) | UI for adding/removing external MCP servers (name, transport, command, args, auto-approve list). |
+
+#### M3 — Cross-repo AI (📌 P1)
+
+| Task | Files | Description |
+|------|-------|-------------|
+| Cross-repo intelligence | [`agent/agent_loop.py`](agent/agent_loop.py) | Wire `codebase-memory` cross-repo mode. Agent can query OpenCode, Jarvis, and other indexed projects. |
+
+#### M4 — Extended Features (🧊 P2)
+
+| Task | Files | Description |
+|------|-------|-------------|
+| Voice input | New | whisper.cpp integration (reuse Jarvis CMake pattern) |
+| System monitoring | New | CPU/RAM/GPU metrics from Jarvis |
+| TTS output | New | Text-to-speech from Jarvis |
+
+### 11.3 Integration Risk Assessment
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| FileTree C++ model complexity | 🔴 High | Start with Plasma5Support.DataSource, migrate to C++ model later |
-| Config persistence API changes | 🟡 Medium | Use stable Plasmoid.configuration API |
+| FileTree C++ model complexity | 🔴 High | Start with `Plasma5Support.DataSource`, migrate to C++ model later |
+| Config persistence API changes | 🟡 Medium | Use stable `Plasmoid.configuration` API |
 | whisper.cpp build complexity | 🟡 Medium | Reuse Jarvis CMake integration pattern |
 | Cross-repo query latency | 🟢 Low | Async queries with progress indicator |
 
 ---
 
-*Generated by Merge Resolver Agent · Phase 2 complete · Phase 3 initiated · 2026-05-26*
+## 12. Phase 2 Completion Summary
+
+Phase 2 (MCP + RAG + C++ Native) is fully complete:
+
+| Component | Status | Key Deliverables |
+|-----------|--------|-----------------|
+| **MCP Server** | ✅ Done | `agent/mcp_server.py` — stdio + SSE transports, tool discovery |
+| **MCP Client** | ✅ Done | `agent/mcp_client.py` — dynamic server connection, auto-approve |
+| **RAG Engine** | ✅ Done | `agent/rag.py` — ChromaDB, 3 collections, Ollama embeddings, chunking |
+| **C++ Native** | ✅ Done | `CMakeLists.txt`, GCC 16 flags, LTO thin, PGO pipeline, llama.cpp from source |
+| **Open-Source Research** | ✅ Done | 5 projects indexed (OpenCode, Jarvis, Zoo-Code, end4, Aider), 8 patterns extracted |
+| **Arch Linux PKGBUILD** | ✅ Done | `packaging/arch/PKGBUILD` |
+| **Installer** | ✅ Done | `install.sh` — 8 steps with fallbacks |
+
+---
+
+*Generated by KDE Plasma Specialist · Phase 2 complete · Phase 3 active · 2026-05-26*

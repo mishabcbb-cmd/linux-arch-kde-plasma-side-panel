@@ -1,5 +1,7 @@
 /*
  * contents/config/ConfigAdvanced.qml — Advanced settings: OpenObserve, token limits.
+ *
+ * All fields bound to Plasmoid.configuration for persistence.
  */
 
 import QtQuick 2.15
@@ -7,6 +9,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import org.kde.kirigami 2.20 as Kirigami
 import org.kde.plasma.components 3.0 as PlasmaComponents
+import org.kde.plasma.plasmoid
 
 Item {
     id: configAdvancedRoot
@@ -41,7 +44,8 @@ Item {
                         from: 10000
                         to: 200000
                         stepSize: 10000
-                        value: 100000
+                        value: plasmoid.configuration.maxInputTokens || 100000
+                        onValueChanged: plasmoid.configuration.maxInputTokens = value
                         Layout.fillWidth: true
                     }
                 }
@@ -55,7 +59,8 @@ Item {
                         from: 1024
                         to: 32768
                         stepSize: 1024
-                        value: 8192
+                        value: plasmoid.configuration.maxOutputTokens || 8192
+                        onValueChanged: plasmoid.configuration.maxOutputTokens = value
                         Layout.fillWidth: true
                     }
                 }
@@ -86,8 +91,10 @@ Item {
 
                     PlasmaComponents.TextField {
                         id: ooEndpointField
+                        text: plasmoid.configuration.ooEndpoint || ""
                         placeholderText: "http://localhost:5080"
                         Layout.fillWidth: true
+                        onTextChanged: plasmoid.configuration.ooEndpoint = text
                     }
                 }
 
@@ -97,9 +104,10 @@ Item {
 
                     PlasmaComponents.TextField {
                         id: ooStreamField
-                        text: "ai-agent-events"
+                        text: plasmoid.configuration.ooStream || "ai-agent-events"
                         placeholderText: "ai-agent-events"
                         Layout.fillWidth: true
+                        onTextChanged: plasmoid.configuration.ooStream = text
                     }
                 }
 
@@ -132,7 +140,8 @@ Item {
                         from: 5
                         to: 100
                         stepSize: 5
-                        value: 50
+                        value: plasmoid.configuration.maxIterations || 50
+                        onValueChanged: plasmoid.configuration.maxIterations = value
                         Layout.fillWidth: true
                     }
                 }

@@ -1,11 +1,7 @@
 /*
  * contents/config/ConfigApi.qml — API configuration settings page.
  *
- * Settings:
- *   • API key input (masked)
- *   • Provider toggle: Claude API ↔ Ollama
- *   • Model selector (claude-sonnet-4-20250514 / ollama model name)
- *   • Ollama host URL
+ * All fields are bound to Plasmoid.configuration for persistence.
  *
  * Pattern: JARVIS configGeneral.qml (Kirigami.FormLayout + separators)
  */
@@ -15,6 +11,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import org.kde.kirigami 2.20 as Kirigami
 import org.kde.plasma.components 3.0 as PlasmaComponents
+import org.kde.plasma.plasmoid
 
 Item {
     id: configApiRoot
@@ -59,31 +56,48 @@ Item {
 
                     PlasmaComponents.RadioButton {
                         text: i18n("Claude API")
-                        checked: true
+                        checked: plasmoid.configuration.apiProvider === "claude"
                         PlasmaComponents.ButtonGroup.group: providerGroup
+                        onClicked: plasmoid.configuration.apiProvider = "claude"
                     }
 
                     PlasmaComponents.RadioButton {
                         text: i18n("Ollama (Local)")
+                        checked: plasmoid.configuration.apiProvider === "ollama"
                         PlasmaComponents.ButtonGroup.group: providerGroup
+                        onClicked: plasmoid.configuration.apiProvider = "ollama"
+                    }
+
+                    PlasmaComponents.RadioButton {
+                        text: i18n("OpenRouter")
+                        checked: plasmoid.configuration.apiProvider === "openrouter"
+                        PlasmaComponents.ButtonGroup.group: providerGroup
+                        onClicked: plasmoid.configuration.apiProvider = "openrouter"
+                    }
+
+                    PlasmaComponents.RadioButton {
+                        text: i18n("OpenAI")
+                        checked: plasmoid.configuration.apiProvider === "openai"
+                        PlasmaComponents.ButtonGroup.group: providerGroup
+                        onClicked: plasmoid.configuration.apiProvider = "openai"
                     }
                 }
             }
 
             // ════════════════════════════════════════
-            // Claude API Settings
+            // API Settings
             // ════════════════════════════════════════
             Kirigami.FormLayout {
-                id: claudeSettings
+                id: apiSettings
                 Layout.fillWidth: true
 
                 Kirigami.Separator {
                     Kirigami.FormData.isSection: true
-                    Kirigami.FormData.label: i18n("Claude API / OpenRouter / llama.cpp")
+                    Kirigami.FormData.label: i18n("API Settings")
                 }
 
                 Label {
-                    text: i18n("Set your API key for Claude or OpenRouter. Leave blank for local llama.cpp.")
+                    text: i18n("Set your API key for Claude or OpenRouter. Leave blank for local Ollama/llama.cpp.")
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                     color: Kirigami.Theme.disabledTextColor
@@ -99,6 +113,8 @@ Item {
                         echoMode: TextInput.Password
                         placeholderText: "sk-ant-api03-... or sk-or-v1-..."
                         Layout.fillWidth: true
+                        text: plasmoid.configuration.apiKey || ""
+                        onTextChanged: plasmoid.configuration.apiKey = text
                     }
 
                     PlasmaComponents.Button {
@@ -125,7 +141,8 @@ Item {
                     spacing: Kirigami.Units.smallSpacing
 
                     PlasmaComponents.ComboBox {
-                        id: claudeModelSelector
+                        id: modelSelector
+                        editable: true
                         model: [
                             "claude-sonnet-4-20250514",
                             "claude-3-5-sonnet-20241022",
@@ -134,7 +151,11 @@ Item {
                             "google/gemini-2.5-flash",
                             "meta-llama/llama-4-maverick",
                         ]
-                        currentIndex: 0
+                        currentIndex: {
+                            var idx = model.indexOf(plasmoid.configuration.model || "claude-sonnet-4-20250514")
+                            return idx >= 0 ? idx : 0
+                        }
+                        onCurrentTextChanged: plasmoid.configuration.model = currentText
                         Layout.fillWidth: true
                     }
                 }
@@ -166,9 +187,10 @@ Item {
 
                     PlasmaComponents.TextField {
                         id: ollamaHostField
-                        text: "http://localhost:11434"
+                        text: plasmoid.configuration.ollamaHost || "http://localhost:11434"
                         placeholderText: "http://localhost:11434"
                         Layout.fillWidth: true
+                        onTextChanged: plasmoid.configuration.ollamaHost = text
                     }
                 }
 
@@ -178,9 +200,10 @@ Item {
 
                     PlasmaComponents.TextField {
                         id: ollamaModelField
-                        text: "llama3.2"
+                        text: plasmoid.configuration.ollamaModel || "llama3.2"
                         placeholderText: "llama3.2"
                         Layout.fillWidth: true
+                        onTextChanged: plasmoid.configuration.ollamaModel = text
                     }
                 }
 
@@ -213,8 +236,9 @@ Item {
                         from: 0.0
                         to: 1.0
                         stepSize: 0.1
-                        value: 0.7
+                        value: plasmoid.configuration.temperature || 0.7
                         Layout.fillWidth: true
+                        onValueChanged: plasmoid.configuration.temperature = value
                     }
 
                     Label {
