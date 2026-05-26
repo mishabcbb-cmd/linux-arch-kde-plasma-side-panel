@@ -41,6 +41,7 @@ from .llm_client import (
     TokenUsage,
     create_provider_from_config,
 )
+from .mcp_client import MCPClientManager
 from .tools import ToolRegistry, ToolResult
 
 logger = logging.getLogger(__name__)
@@ -133,6 +134,16 @@ class AgentLoop:
             working_dir=self.working_dir,
             dbus_signal=None,  # Set later via set_signal_handler
         )
+
+        # MCP Client Manager — connects to external MCP servers
+        self.mcp_client = MCPClientManager()
+        mcp_servers_config = config.get("mcp_servers", {})
+        if mcp_servers_config:
+            self.mcp_client.load_from_config(mcp_servers_config)
+            logger.info(
+                f"MCP client initialized: {len(self.mcp_client.connected_servers)} servers, "
+                f"{self.mcp_client.total_tools} tools"
+            )
 
         # State
         self.status: AgentStatus = AgentStatus.IDLE
@@ -309,18 +320,72 @@ class AgentLoop:
         except Exception as exc:
             logger.warning(f"Repo map generation failed: {exc}")
 
+        # Cross-repo intelligence: enrich context with reference project info
+        cross_repo_context = self._build_cross_repo_context(task)
+        if cross_repo_context:
+            self.context.add_system_message(cross_repo_context)
+            self._log_event("cross_repo_context_added", {
+                "context_length": len(cross_repo_context),
+            })
+
         # Add the task as the first user message
         task_message = f"## Task\n\n{task}\n\nProceed step by step. Use tools as needed. Signal TASK_COMPLETE when done."
         self.context.add_user_message(task_message)
 
+    def _build_cross_repo_context(self, task: str) -> str:
+        """Build cross-repository context from indexed reference projects.
+
+        Searches codebase-memory for patterns related to the current task
+        and injects relevant findings as system context.
+        """
+        parts = []
+
+        # Check if MCP client has codebase-memory connected
+        mcp_tools = self.mcp_client.get_all_tools()
+        has_codebase_memory = any(
+            "search_graph" in t.name or "search_code" in t.name
+            for t in mcp_tools
+        )
+
+        if has_codebase_memory:
+            parts.append(
+                "## Cross-Repository Intelligence\n\n"
+                "The following reference projects are indexed and available for queries:\n"
+                "  • OpenCode — Go-based MCP client, PubSub, permission system\n"
+                "  • Jarvis — C++ KDE plasmoid, llama.cpp integration\n"
+                "  • Aider — Python AI coding assistant, repo_map pattern\n\n"
+                "Use `cross_repo_search` to find patterns across these projects.\n"
+                "Use `cross_repo_trace` to trace function calls through a specific project.\n"
+            )
+        else:
+            # Even without MCP, the built-in cross_repo_search tool can search
+            # reference project directories via ripgrep fallback
+            parts.append(
+                "## Cross-Repository Intelligence\n\n"
+                "Reference projects are available for code search:\n"
+                "  • OpenCode (~/ecosystem/source-codes/opencode-main)\n"
+                "  • Jarvis (~/ecosystem/source-codes/jarvis-main)\n\n"
+                "Use `cross_repo_search` to find patterns across these projects.\n"
+                "Use `cross_repo_trace` to trace function calls (requires codebase-memory CLI).\n"
+            )
+
+        return "\n".join(parts)
+
     def _call_llm(self) -> ProviderResponse:
         """Send context to LLM and stream response to UI."""
         system, messages = self.context.prepare_messages_for_streaming()
-        tools = self.tools.get_tool_schemas()
+
+        # Merge built-in tools with MCP tools
+        builtin_tools = self.tools.get_tool_schemas()
+        mcp_tools = self.mcp_client.get_tool_schemas()
+        all_tools = builtin_tools + mcp_tools
+
         self._log_event("llm_call_start", {
             "iteration": self._iteration,
             "message_count": len(messages),
-            "tool_count": len(tools),
+            "tool_count": len(all_tools),
+            "builtin_tools": len(builtin_tools),
+            "mcp_tools": len(mcp_tools),
         })
 
         # Collect the full response
@@ -330,7 +395,7 @@ class AgentLoop:
         current_tool_input: str = ""
 
         try:
-            for event in self.provider.stream_message(messages, tools, system_prompt=system):
+            for event in self.provider.stream_message(messages, all_tools, system_prompt=system):
                 if self._stop_flag.is_set():
                     break
 
@@ -426,9 +491,11 @@ class AgentLoop:
 
         start_time = time.time()
 
-        # Handle ask_user specially — it pauses the loop
+        # Route tool execution: ask_user → local, MCP tools → MCP client, rest → ToolRegistry
         if tool_name == "ask_user":
             result = self._handle_ask_user(tool_input)
+        elif self._is_mcp_tool(tool_name):
+            result = self._execute_mcp_tool(tool_name, tool_input)
         else:
             result = self.tools.execute(tool_name, tool_input)
 
@@ -495,6 +562,57 @@ class AgentLoop:
 
         self._set_status(AgentStatus.THINKING)
         return result
+
+    # ========================================================================
+    # MCP Tool Routing
+    # ========================================================================
+
+    def _is_mcp_tool(self, tool_name: str) -> bool:
+        """Check if a tool is provided by an external MCP server."""
+        for tool in self.mcp_client.get_all_tools():
+            if tool.name == tool_name:
+                return True
+        return False
+
+    def _execute_mcp_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> ToolResult:
+        """Execute a tool via the MCP client manager.
+
+        Finds the server that provides this tool and routes the call.
+        """
+        # Find which server provides this tool
+        server_name = None
+        for tool in self.mcp_client.get_all_tools():
+            if tool.name == tool_name:
+                server_name = tool.server_name
+                break
+
+        if not server_name:
+            return ToolResult(
+                tool_name=tool_name,
+                success=False,
+                error=f"MCP tool '{tool_name}' not found on any connected server",
+            )
+
+        # Execute via MCP client
+        mcp_result = self.mcp_client.execute_tool(server_name, tool_name, tool_input)
+
+        # Convert MCP result to ToolResult
+        if mcp_result.get("isError"):
+            error_text = mcp_result.get("content", [{}])[0].get("text", "Unknown error")
+            return ToolResult(
+                tool_name=tool_name,
+                success=False,
+                error=error_text,
+                metadata={"mcp_server": server_name},
+            )
+        else:
+            output_text = mcp_result.get("content", [{}])[0].get("text", "")
+            return ToolResult(
+                tool_name=tool_name,
+                success=True,
+                output=output_text,
+                metadata={"mcp_server": server_name},
+            )
 
     @staticmethod
     def _is_task_complete(response: ProviderResponse) -> bool:

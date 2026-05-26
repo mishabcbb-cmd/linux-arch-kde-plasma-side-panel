@@ -398,7 +398,7 @@ chmod +x install.sh
 | Task | Files | Description | Status |
 |------|-------|-------------|--------|
 | Pytest suite | [`tests/`](tests/) | 80 unit tests: MCP server (13), MCP client (19), RAG engine (24), ToolRegistry (24). 6 integration tests skipped (require ChromaDB). | ✅ Done |
-| MCP server config UI | [`contents/config/ConfigApi.qml`](plasmoid/ai-agent-panel/contents/config/ConfigApi.qml) | UI for adding/removing external MCP servers (name, transport, command, args, auto-approve list). | 🔄 Next |
+| MCP server config UI | [`contents/config/ConfigApi.qml`](plasmoid/ai-agent-panel/contents/config/ConfigApi.qml) | UI for adding/removing external MCP servers (name, transport, command, args, auto-approve list). Persisted via `mcpServersJson` in main.xml. | ✅ Done |
 
 #### M3 — Cross-repo AI (📌 P1)
 

@@ -80,6 +80,8 @@ class ToolRegistry:
         self.register("repo_map", self._repo_map)
         self.register("run_tests", self._run_tests)
         self.register("ask_user", self._ask_user)
+        self.register("cross_repo_search", self._cross_repo_search)
+        self.register("cross_repo_trace", self._cross_repo_trace)
 
     def register(self, name: str, func: Callable[[Dict[str, Any]], ToolResult]) -> None:
         self._tools[name] = func
@@ -243,6 +245,66 @@ class ToolRegistry:
                         },
                     },
                     "required": ["question"],
+                },
+            },
+            {
+                "name": "cross_repo_search",
+                "description": (
+                    "Search across ALL indexed reference projects (OpenCode, Jarvis, Aider, "
+                    "llama.cpp, and other open-source projects) for code patterns, functions, "
+                    "classes, or architectural patterns. Uses the codebase-memory knowledge graph. "
+                    "Returns matching symbols with their source project, file path, and description. "
+                    "Use this to find how other projects implement similar features."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Natural language or keyword search query (e.g. 'MCP client implementation', 'tool registry pattern')",
+                        },
+                        "project": {
+                            "type": "string",
+                            "description": "Optional: limit search to a specific project (e.g. 'opencode-main', 'jarvis-main')",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of results (default: 10, max: 30)",
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
+                "name": "cross_repo_trace",
+                "description": (
+                    "Trace function calls, data flow, or cross-service calls through "
+                    "a specific reference project's codebase. Uses the codebase-memory "
+                    "knowledge graph to follow CALLS, DATA_FLOWS, and HTTP_CALLS edges. "
+                    "Use this to understand how a specific function is called and what it calls."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "function_name": {
+                            "type": "string",
+                            "description": "Function or method name to trace (e.g. 'handleToolCall', 'RunTask')",
+                        },
+                        "project": {
+                            "type": "string",
+                            "description": "Project to trace in (e.g. 'opencode-main', 'jarvis-main')",
+                        },
+                        "direction": {
+                            "type": "string",
+                            "enum": ["inbound", "outbound", "both"],
+                            "description": "Trace direction: inbound (callers), outbound (callees), or both (default: both)",
+                        },
+                        "depth": {
+                            "type": "integer",
+                            "description": "Trace depth (default: 2, max: 5)",
+                        },
+                    },
+                    "required": ["function_name", "project"],
                 },
             },
         ]
@@ -846,3 +908,174 @@ class ToolRegistry:
                     output="User response: (no input available)",
                     metadata={"question": question, "answer": None},
                 )
+
+    # ========================================================================
+    # Cross-Repository Intelligence Tools
+    # ========================================================================
+
+    def _cross_repo_search(self, args: Dict[str, Any]) -> ToolResult:
+        """Search across all indexed reference projects using codebase-memory."""
+        query = args.get("query", "")
+        project = args.get("project", "")
+        limit = min(args.get("limit", 10), 30)
+
+        if not query:
+            return ToolResult(
+                tool_name="cross_repo_search",
+                success=False,
+                error="Query is required",
+            )
+
+        try:
+            # Use codebase-memory search_graph via bash
+            cmd_parts = [
+                "codebase-memory", "search-graph",
+                "--project", project if project else "*",
+                "--query", query,
+                "--limit", str(limit),
+            ]
+            result = subprocess.run(
+                cmd_parts,
+                capture_output=True, text=True, timeout=30,
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                output = result.stdout.strip()
+            else:
+                # Fallback: try via MCP tool if codebase-memory CLI not available
+                output = self._fallback_cross_repo_search(query, project, limit)
+
+            return ToolResult(
+                tool_name="cross_repo_search",
+                success=True,
+                output=output,
+                metadata={"query": query, "project": project or "all", "limit": limit},
+            )
+
+        except FileNotFoundError:
+            # codebase-memory CLI not installed, try fallback
+            output = self._fallback_cross_repo_search(query, project, limit)
+            return ToolResult(
+                tool_name="cross_repo_search",
+                success=True,
+                output=output,
+                metadata={"query": query, "project": project or "all", "limit": limit, "method": "fallback"},
+            )
+        except subprocess.TimeoutExpired:
+            return ToolResult(
+                tool_name="cross_repo_search",
+                success=False,
+                error="Cross-repo search timed out after 30s",
+            )
+        except Exception as exc:
+            return ToolResult(
+                tool_name="cross_repo_search",
+                success=False,
+                error=f"Cross-repo search failed: {exc}",
+            )
+
+    def _fallback_cross_repo_search(self, query: str, project: str, limit: int) -> str:
+        """Fallback: use ripgrep across known reference project directories."""
+        ref_dirs = []
+
+        # Known reference project locations
+        known_projects = {
+            "opencode-main": os.path.expanduser("~/ecosystem/source-codes/opencode-main/opencode-main"),
+            "jarvis-main": os.path.expanduser("~/ecosystem/source-codes/jarvis-main/jarvis-main"),
+        }
+
+        if project and project in known_projects:
+            ref_dirs = [known_projects[project]]
+        elif project:
+            ref_dirs = [os.path.expanduser(f"~/ecosystem/source-codes/{project}")]
+        else:
+            ref_dirs = list(known_projects.values())
+
+        results = []
+        for ref_dir in ref_dirs:
+            if not os.path.isdir(ref_dir):
+                continue
+            proj_name = os.path.basename(ref_dir)
+            try:
+                rg_result = subprocess.run(
+                    ["rg", "--line-number", "--no-heading", "--color=never",
+                     "-g", "*.py", "-g", "*.go", "-g", "*.ts", "-g", "*.rs",
+                     "-m", "5", query, ref_dir],
+                    capture_output=True, text=True, timeout=15,
+                )
+                if rg_result.stdout.strip():
+                    lines = rg_result.stdout.strip().splitlines()[:limit]
+                    results.append(f"\n## {proj_name}")
+                    results.extend(f"  {l}" for l in lines)
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                continue
+
+        if results:
+            return "\n".join(results)
+        return f"No cross-repo results found for: {query}"
+
+    def _cross_repo_trace(self, args: Dict[str, Any]) -> ToolResult:
+        """Trace function calls through a reference project using codebase-memory."""
+        function_name = args.get("function_name", "")
+        project = args.get("project", "")
+        direction = args.get("direction", "both")
+        depth = min(args.get("depth", 2), 5)
+
+        if not function_name or not project:
+            return ToolResult(
+                tool_name="cross_repo_trace",
+                success=False,
+                error="Both function_name and project are required",
+            )
+
+        try:
+            cmd_parts = [
+                "codebase-memory", "trace-path",
+                "--project", project,
+                "--function", function_name,
+                "--direction", direction,
+                "--depth", str(depth),
+            ]
+            result = subprocess.run(
+                cmd_parts,
+                capture_output=True, text=True, timeout=30,
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                output = result.stdout.strip()
+            else:
+                output = f"Trace: {function_name} in {project} ({direction}, depth={depth})\n"
+                output += "(codebase-memory CLI not available. Install with: pip install codebase-memory)"
+
+            return ToolResult(
+                tool_name="cross_repo_trace",
+                success=True,
+                output=output,
+                metadata={
+                    "function": function_name,
+                    "project": project,
+                    "direction": direction,
+                    "depth": depth,
+                },
+            )
+
+        except FileNotFoundError:
+            return ToolResult(
+                tool_name="cross_repo_trace",
+                success=True,
+                output=f"codebase-memory CLI not available. Install to enable trace.\n"
+                       f"Requested: trace {function_name} in {project} ({direction}, depth={depth})",
+                metadata={"function": function_name, "project": project, "available": False},
+            )
+        except subprocess.TimeoutExpired:
+            return ToolResult(
+                tool_name="cross_repo_trace",
+                success=False,
+                error="Cross-repo trace timed out after 30s",
+            )
+        except Exception as exc:
+            return ToolResult(
+                tool_name="cross_repo_trace",
+                success=False,
+                error=f"Cross-repo trace failed: {exc}",
+            )
