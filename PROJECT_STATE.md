@@ -409,13 +409,13 @@ chmod +x install.sh
 | MCP client integration | [`agent/agent_loop.py`](agent/agent_loop.py) | `MCPClientManager` wired into AgentLoop. MCP tools merged with built-in tools in `_call_llm()`. MCP tool routing in `_execute_tool()`. | ✅ Done |
 | Context enrichment | [`agent/agent_loop.py`](agent/agent_loop.py) | `_build_cross_repo_context()` injects reference project info into system context at task start | ✅ Done |
 
-#### M4 — Extended Features (🧊 P2)
+#### M4 — Extended Features (🧊 P2) ✅
 
-| Task | Files | Description |
-|------|-------|-------------|
-| Voice input | New | whisper.cpp integration (reuse Jarvis CMake pattern) |
-| System monitoring | New | CPU/RAM/GPU metrics from Jarvis |
-| TTS output | New | Text-to-speech from Jarvis |
+| Task | Files | Description | Status |
+|------|-------|-------------|--------|
+| System monitoring | [`agent/tools.py`](agent/tools.py) | `system_monitor` — CPU, memory, temperature, disk, uptime via /proc (pattern: Jarvis readCpuUsage, readMemoryUsage, readCpuTemp) | ✅ Done |
+| Voice input | [`agent/tools.py`](agent/tools.py) | `voice_input` — record + transcribe via whisper.cpp (primary) or system STT. Falls back gracefully if whisper not installed. | ✅ Done |
+| TTS output | [`agent/tools.py`](agent/tools.py) | `tts_output` — text-to-speech via espeak-ng → speech-dispatcher. Falls back gracefully if no TTS engine. | ✅ Done |
 
 ### 11.3 Integration Risk Assessment
 

@@ -1,0 +1,8 @@
+{% for msg in messages %}
+    {% include "partials/message.html" %}
+{% else %}
+    <div class="empty-state">
+        <h2>🤖 KDE AI Agent</h2>
+        <p>Type a task below to get started.</p>
+    </div>
+{% endfor %}

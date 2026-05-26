@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDE AI Agent</title>
+    <script src="https://unpkg.com/htmx.org@2.0.10"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1b26;
+            color: #c0caf5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            padding: 12px 20px;
+            background: #1f2335;
+            border-bottom: 1px solid #2f3345;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        header h1 { font-size: 16px; font-weight: 600; }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #639922;
+        }
+        .status-dot.thinking { background: #3DAEE9; animation: pulse 1s infinite; }
+        .status-dot.error { background: #E24B4A; }
+        .status-dot.complete { background: #639922; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .message {
+            padding: 10px 14px;
+            border-radius: 8px;
+            max-width: 85%;
+            line-height: 1.5;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .message.user {
+            background: #2f3345;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .message.thought { align-self: flex-start; color: #c0caf5; }
+        .message.tool_call {
+            background: rgba(239, 159, 39, 0.1);
+            border-left: 3px solid #EF9F27;
+            align-self: flex-start;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .message.tool_result {
+            background: rgba(29, 158, 117, 0.1);
+            border-left: 3px solid #1D9E75;
+            align-self: flex-start;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .message.error {
+            background: rgba(226, 75, 74, 0.1);
+            border-left: 3px solid #E24B4A;
+            align-self: flex-start;
+            color: #E24B4A;
+        }
+        .tool-name {
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        #input-area {
+            padding: 12px 20px;
+            background: #1f2335;
+            border-top: 1px solid #2f3345;
+            display: flex;
+            gap: 8px;
+        }
+        #input-area textarea {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #2f3345;
+            border-radius: 8px;
+            background: #24283b;
+            color: #c0caf5;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            min-height: 42px;
+            max-height: 120px;
+        }
+        #input-area textarea:focus {
+            outline: none;
+            border-color: #3DAEE9;
+        }
+        #input-area button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #3DAEE9;
+            color: #1a1b26;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #input-area button:hover { background: #4db8f0; }
+        #input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .actions {
+            display: flex;
+            gap: 4px;
+        }
+        .actions button {
+            padding: 8px 12px;
+            border: 1px solid #2f3345;
+            border-radius: 6px;
+            background: transparent;
+            color: #c0caf5;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .actions button:hover { background: #2f3345; }
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #565f89;
+            gap: 8px;
+        }
+        .empty-state h2 { font-size: 20px; }
+        .empty-state p { font-size: 14px; }
+    </style>
+</head>
+<body>
+    <header>
+        <span class="status-dot" id="statusDot"></span>
+        <h1>KDE AI Agent</h1>
+        <span style="font-size:12px;color:#565f89" id="statusText">idle</span>
+        <div style="flex:1"></div>
+        <div class="actions">
+            <button hx-post="/stop" hx-swap="none">⏹ Stop</button>
+            <button hx-post="/clear" hx-target="#chat" hx-swap="innerHTML">🗑 Clear</button>
+        </div>
+    </header>
+
+    <div id="chat">
+        {% if messages %}
+            {% for msg in messages %}
+                {% include "partials/message.html" %}
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <h2>🤖 KDE AI Agent</h2>
+                <p>Type a task below to get started.</p>
+                <p style="font-size:12px">The agent can read, write, search, and test code.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div id="input-area">
+        <textarea id="taskInput" placeholder="Describe your task..." rows="1"
+            hx-on:keydown="if(event.key==='Enter'&&event.ctrlKey){event.preventDefault();this.form.requestSubmit()}"></textarea>
+        <button hx-post="/chat" hx-include="#taskInput" hx-target="#chat" hx-swap="innerHTML"
+            hx-on:click="document.getElementById('taskInput').value=''">
+            Send
+        </button>
+    </div>
+
+    <script>
+        // Poll status
+        setInterval(async () => {
+            const resp = await fetch('/status');
+            const data = await resp.json();
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            dot.className = 'status-dot ' + data.status;
+            text.textContent = data.status;
+        }, 1000);
+
+        // Auto-scroll
+        const chat = document.getElementById('chat');
+        const observer = new MutationObserver(() => {
+            chat.scrollTop = chat.scrollHeight;
+        });
+        observer.observe(chat, { childList: true, subtree: true });
+
+        // Auto-resize textarea
+        document.getElementById('taskInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>

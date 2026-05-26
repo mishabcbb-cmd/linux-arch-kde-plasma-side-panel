@@ -1,0 +1,34 @@
+# cmake/BuildWhisper.cmake.in — Build whisper.cpp from source via FetchContent
+#
+# Downloads and builds whisper.cpp for voice input transcription.
+# Provides whisper-cli binary for the voice_input tool.
+#
+# Pattern: thetom.cpp llama.cpp build
+
+message(STATUS "Building whisper.cpp from source...")
+
+include(FetchContent)
+
+set(WHISPER_VERSION "v1.8.3")
+set(WHISPER_REPO "https://github.com/ggerganov/whisper.cpp")
+
+FetchContent_Declare(
+    whisper
+    GIT_REPOSITORY ${WHISPER_REPO}
+    GIT_TAG ${WHISPER_VERSION}
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+
+# whisper.cpp build options (minimal)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WHISPER_COREML OFF CACHE BOOL "" FORCE)
+set(WHISPER_CUDA OFF CACHE BOOL "" FORCE)
+set(WHISPER_METAL OFF CACHE BOOL "" FORCE)
+set(WHISPER_OPENMP ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(whisper)
+
+message(STATUS "whisper.cpp ${WHISPER_VERSION} built: ${whisper_SOURCE_DIR}")

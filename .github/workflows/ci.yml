@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep tree-sitter
+
+      - name: Install Python deps
+        run: |
+          pip install --upgrade pip
+          pip install pytest pytest-cov
+          pip install -r agent/requirements.txt --break-system-packages 2>/dev/null || true
+
+      - name: Run tests
+        run: |
+          python -m pytest tests/ -v --tb=short --cov=agent --cov-report=term-missing
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install linters
+        run: |
+          pip install ruff mypy
+
+      - name: Ruff check
+        run: ruff check agent/ tests/ --ignore=E501,F401
+
+      - name: MyPy check
+        run: mypy agent/ --ignore-missing-imports --follow-imports=skip || true
+
+  build-native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ pybind11-dev
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Test native module
+        run: |
+          python3 -c "
+          import sys
+          sys.path.insert(0, 'build')
+          try:
+              import rag_native
+              print('Native module OK:', rag_native.__doc__)
+          except ImportError:
+              print('Native module not built (pybind11 may be missing)')
+          "

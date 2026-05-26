@@ -1,0 +1,17 @@
+{% if msg.type == "user" %}
+<div class="message user">{{ msg.content }}</div>
+{% elif msg.type == "error" %}
+<div class="message error">{{ msg.content }}</div>
+{% elif msg.type == "tool_call" %}
+<div class="message tool_call">
+    <div class="tool-name" style="color:#EF9F27">🔧 {{ msg.tool_name }}</div>
+    {{ msg.content }}
+</div>
+{% elif msg.type == "tool_result" %}
+<div class="message tool_result">
+    <div class="tool-name" style="color:#1D9E75">{{ "✅" if msg.success else "❌" }} {{ msg.tool_name }}</div>
+    {{ msg.content }}
+</div>
+{% else %}
+<div class="message thought">{{ msg.content }}</div>
+{% endif %}
