@@ -72,5 +72,11 @@
             <label>Last browsed directory in FileTree</label>
             <default>~</default>
         </entry>
+
+        <!-- MCP Server Configuration -->
+        <entry name="mcpServersJson" type="String">
+            <label>JSON array of MCP server configurations</label>
+            <default>[]</default>
+        </entry>
     </group>
 </kcfg>

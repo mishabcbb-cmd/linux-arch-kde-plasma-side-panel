@@ -257,7 +257,267 @@ Item {
                 }
             }
 
+            // ════════════════════════════════════════
+            // MCP Server Configuration
+            // ════════════════════════════════════════
+            Kirigami.FormLayout {
+                id: mcpSettings
+                Layout.fillWidth: true
+
+                Kirigami.Separator {
+                    Kirigami.FormData.isSection: true
+                    Kirigami.FormData.label: i18n("External MCP Servers")
+                }
+
+                Label {
+                    text: i18n("Connect the agent to external MCP servers (lean-ctx, engram, codebase-memory, searxng, etc.). Servers provide additional tools for the agent.")
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                    color: Kirigami.Theme.disabledTextColor
+                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                }
+
+                // ── MCP Server List ──
+                PlasmaComponents.ScrollView {
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: Kirigami.Units.gridUnit * 6
+                    Layout.maximumHeight: Kirigami.Units.gridUnit * 12
+                    clip: true
+
+                    ListView {
+                        id: mcpServerList
+                        model: mcpServerModel
+                        spacing: 2
+                        currentIndex: -1
+
+                        delegate: PlasmaComponents.ItemDelegate {
+                            width: ListView.view.width
+                            height: Kirigami.Units.gridUnit * 2.5
+
+                            contentItem: RowLayout {
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Kirigami.Icon {
+                                    source: model.transport === "sse" ? "network-connect" : "utilities-terminal"
+                                    implicitWidth: Kirigami.Units.iconSizes.small
+                                    implicitHeight: Kirigami.Units.iconSizes.small
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
+
+                                    Label {
+                                        text: model.name
+                                        font.bold: true
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Label {
+                                        text: model.transport + "  •  " + (model.toolCount || 0) + " tools"
+                                        font.pointSize: Kirigami.Theme.smallFont.pointSize
+                                        color: Kirigami.Theme.disabledTextColor
+                                    }
+                                }
+
+                                PlasmaComponents.ToolButton {
+                                    icon.name: "edit-delete"
+                                    display: PlasmaComponents.Button.IconOnly
+                                    onClicked: removeMcpServer(index)
+
+                                    PlasmaComponents.ToolTip {
+                                        text: "Remove " + model.name
+                                    }
+                                }
+                            }
+                        }
+
+                        // Empty state
+                        Kirigami.PlaceholderMessage {
+                            anchors.centerIn: parent
+                            visible: mcpServerList.count === 0
+                            text: "No MCP servers configured"
+                            explanation: "Add servers to provide the agent with additional tools"
+                            icon.name: "network-server"
+                        }
+                    }
+                }
+
+                // ── Add MCP Server Form ──
+                Kirigami.Separator {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                }
+
+                Label {
+                    text: i18n("Add MCP Server")
+                    font.bold: true
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                }
+
+                RowLayout {
+                    Kirigami.FormData.label: i18n("Name:")
+                    spacing: Kirigami.Units.smallSpacing
+
+                    PlasmaComponents.TextField {
+                        id: newServerName
+                        placeholderText: "e.g. my-custom-server"
+                        Layout.fillWidth: true
+                    }
+                }
+
+                RowLayout {
+                    Kirigami.FormData.label: i18n("Transport:")
+                    spacing: Kirigami.Units.smallSpacing
+
+                    PlasmaComponents.ComboBox {
+                        id: newServerTransport
+                        model: ["stdio", "sse"]
+                        currentIndex: 0
+                    }
+                }
+
+                RowLayout {
+                    Kirigami.FormData.label: i18n("Command:")
+                    spacing: Kirigami.Units.smallSpacing
+                    visible: newServerTransport.currentText === "stdio"
+
+                    PlasmaComponents.TextField {
+                        id: newServerCommand
+                        placeholderText: "/usr/bin/my-mcp-server"
+                        Layout.fillWidth: true
+                    }
+                }
+
+                RowLayout {
+                    Kirigami.FormData.label: i18n("Arguments:")
+                    spacing: Kirigami.Units.smallSpacing
+                    visible: newServerTransport.currentText === "stdio"
+
+                    PlasmaComponents.TextField {
+                        id: newServerArgs
+                        placeholderText: "--flag --option value"
+                        Layout.fillWidth: true
+                    }
+                }
+
+                RowLayout {
+                    Kirigami.FormData.label: i18n("URL:")
+                    spacing: Kirigami.Units.smallSpacing
+                    visible: newServerTransport.currentText === "sse"
+
+                    PlasmaComponents.TextField {
+                        id: newServerUrl
+                        placeholderText: "http://localhost:8765/sse"
+                        Layout.fillWidth: true
+                    }
+                }
+
+                RowLayout {
+                    Kirigami.FormData.label: i18n("Auto-approve:")
+                    spacing: Kirigami.Units.smallSpacing
+
+                    PlasmaComponents.TextField {
+                        id: newServerAutoApprove
+                        placeholderText: "tool1, tool2"
+                        Layout.fillWidth: true
+                    }
+
+                    PlasmaComponents.ToolButton {
+                        icon.name: "help-about"
+                        PlasmaComponents.ToolTip {
+                            text: "Comma-separated tool names that the agent can call without confirmation"
+                        }
+                    }
+                }
+
+                PlasmaComponents.Button {
+                    text: i18n("Add Server")
+                    icon.name: "list-add"
+                    Layout.alignment: Qt.AlignRight
+                    enabled: newServerName.text.trim() !== ""
+                    onClicked: addMcpServer()
+                }
+            }
+
             Item { Layout.fillHeight: true }  // Bottom spacer
         }
+    }
+
+    // ── MCP Server Model ──
+    ListModel {
+        id: mcpServerModel
+    }
+
+    // ── Load MCP servers from config ──
+    function loadMcpServers() {
+        mcpServerModel.clear()
+        var json = plasmoid.configuration.mcpServersJson || "[]"
+        try {
+            var servers = JSON.parse(json)
+            for (var i = 0; i < servers.length; i++) {
+                mcpServerModel.append(servers[i])
+            }
+        } catch (e) {
+            console.warn("[ConfigApi] Failed to parse MCP servers:", e)
+        }
+    }
+
+    // ── Save MCP servers to config ──
+    function saveMcpServers() {
+        var servers = []
+        for (var i = 0; i < mcpServerModel.count; i++) {
+            servers.push(mcpServerModel.get(i))
+        }
+        plasmoid.configuration.mcpServersJson = JSON.stringify(servers)
+    }
+
+    // ── Add MCP server ──
+    function addMcpServer() {
+        var name = newServerName.text.trim()
+        if (!name) return
+
+        var transport = newServerTransport.currentText
+        var server = {
+            name: name,
+            transport: transport,
+            toolCount: 0,
+        }
+
+        if (transport === "stdio") {
+            server.command = newServerCommand.text.trim()
+            server.args = newServerArgs.text.trim()
+                ? newServerArgs.text.trim().split(/\s+/)
+                : []
+            server.auto_approve = newServerAutoApprove.text.trim()
+                ? newServerAutoApprove.text.trim().split(/\s*,\s*/)
+                : []
+        } else {
+            server.url = newServerUrl.text.trim()
+            server.auto_approve = newServerAutoApprove.text.trim()
+                ? newServerAutoApprove.text.trim().split(/\s*,\s*/)
+                : []
+        }
+
+        mcpServerModel.append(server)
+        saveMcpServers()
+
+        // Clear form
+        newServerName.text = ""
+        newServerCommand.text = ""
+        newServerArgs.text = ""
+        newServerUrl.text = ""
+        newServerAutoApprove.text = ""
+    }
+
+    // ── Remove MCP server ──
+    function removeMcpServer(index) {
+        mcpServerModel.remove(index)
+        saveMcpServers()
+    }
+
+    Component.onCompleted: {
+        loadMcpServers()
     }
 }
