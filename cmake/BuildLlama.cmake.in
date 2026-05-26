@@ -1,10 +1,19 @@
-# cmake/BuildLlama.cmake.in — Build llama.cpp (turboquant_plus fork) from local source
+# cmake/BuildLlama.cmake.in — Build TurboQuant+ (llama.cpp fork) from local source
 #
 # Uses the existing turboquant_plus checkout at thetom.cpp for local inference.
-# Fork: https://github.com/TheTom/turboquant_plus
+# Fork: https://github.com/TheTom/turboquant_plus (6.9k ⭐)
+# Runtime: https://github.com/TheTom/llama-cpp-turboquant
+#
+# TurboQuant+ implements Google's TurboQuant (ICLR 2026):
+#   • 4.6-6.4x KV cache compression via Walsh-Hadamard polar quantization
+#   • Attention-gated sparse dequantization
+#   • Layer-aware V compression policies
+#   • Metal kernels for Apple Silicon
+#   • CUDA port with Flash Attention support
+#
 # Provides the `llama` target for linking into rag_native.
 
-message(STATUS "Building llama.cpp (turboquant_plus) from local source: /home/neo/ecosystem/thetom.cpp")
+message(STATUS "Building TurboQuant+ from local source: /home/neo/ecosystem/thetom.cpp")
 
 set(LLAMA_SOURCE_DIR "/home/neo/ecosystem/thetom.cpp")
 
