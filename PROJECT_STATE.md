@@ -400,11 +400,14 @@ chmod +x install.sh
 | Pytest suite | [`tests/`](tests/) | 80 unit tests: MCP server (13), MCP client (19), RAG engine (24), ToolRegistry (24). 6 integration tests skipped (require ChromaDB). | ✅ Done |
 | MCP server config UI | [`contents/config/ConfigApi.qml`](plasmoid/ai-agent-panel/contents/config/ConfigApi.qml) | UI for adding/removing external MCP servers (name, transport, command, args, auto-approve list). Persisted via `mcpServersJson` in main.xml. | ✅ Done |
 
-#### M3 — Cross-repo AI (📌 P1)
+#### M3 — Cross-repo AI (📌 P1) ✅
 
-| Task | Files | Description |
-|------|-------|-------------|
-| Cross-repo intelligence | [`agent/agent_loop.py`](agent/agent_loop.py) | Wire `codebase-memory` cross-repo mode. Agent can query OpenCode, Jarvis, and other indexed projects. |
+| Task | Files | Description | Status |
+|------|-------|-------------|--------|
+| Cross-repo search tool | [`agent/tools.py`](agent/tools.py) | `cross_repo_search` — search across all indexed reference projects via codebase-memory graph or ripgrep fallback | ✅ Done |
+| Cross-repo trace tool | [`agent/tools.py`](agent/tools.py) | `cross_repo_trace` — trace function calls through a specific project (CALLS/DATA_FLOWS/HTTP_CALLS edges) | ✅ Done |
+| MCP client integration | [`agent/agent_loop.py`](agent/agent_loop.py) | `MCPClientManager` wired into AgentLoop. MCP tools merged with built-in tools in `_call_llm()`. MCP tool routing in `_execute_tool()`. | ✅ Done |
+| Context enrichment | [`agent/agent_loop.py`](agent/agent_loop.py) | `_build_cross_repo_context()` injects reference project info into system context at task start | ✅ Done |
 
 #### M4 — Extended Features (🧊 P2)
 

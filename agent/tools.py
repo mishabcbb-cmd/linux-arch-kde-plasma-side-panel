@@ -82,6 +82,9 @@ class ToolRegistry:
         self.register("ask_user", self._ask_user)
         self.register("cross_repo_search", self._cross_repo_search)
         self.register("cross_repo_trace", self._cross_repo_trace)
+        self.register("system_monitor", self._system_monitor)
+        self.register("voice_input", self._voice_input)
+        self.register("tts_output", self._tts_output)
 
     def register(self, name: str, func: Callable[[Dict[str, Any]], ToolResult]) -> None:
         self._tools[name] = func
