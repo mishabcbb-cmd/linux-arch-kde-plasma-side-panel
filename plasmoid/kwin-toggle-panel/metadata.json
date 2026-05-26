@@ -1,0 +1,22 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Id": "toggle-ai-agent-panel",
+        "Version": "1.0.0",
+        "Name": "Toggle AI Agent Panel",
+        "Description": "Toggle the AI Agent side panel with a global shortcut.",
+        "Category": "Windows and Tasks",
+        "Icon": "assistant",
+        "Authors": [
+            {
+                "Email": "ai-agent@kde.org",
+                "Name": "KDE AI Agent"
+            }
+        ],
+        "Website": "https://github.com/kde-ai-agent/kde-ai-agent",
+        "License": "GPL-3.0",
+        "ServiceTypes": ["KWin/Script"]
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

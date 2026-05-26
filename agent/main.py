@@ -226,6 +226,21 @@ if dbus_available:
             """Provide user's answer to an ask_user question."""
             self._agent.provide_user_response(response)
 
+        @dbus.service.method("org.kde.aiagent", in_signature="", out_signature="")
+        def TogglePanel(self) -> None:
+            """Toggle the side panel visibility (called from KWin script)."""
+            logger.info("D-Bus TogglePanel")
+            import subprocess
+            import os
+            panel_script = os.path.join(
+                os.path.dirname(__file__), "side_panel.py"
+            )
+            subprocess.Popen(
+                [sys.executable, panel_script, "--width", "380"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
         @dbus.service.signal("org.kde.aiagent", signature="ss")
         def StatusChanged(self, status: str, data: str) -> None:
             pass

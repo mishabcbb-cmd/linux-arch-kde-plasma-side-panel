@@ -6,22 +6,23 @@ Frameless side panel using PyQt6 + QtDBus.
 Positioned on left screen edge. Shows on mouse hover in top-left corner.
 Toggle: Ctrl+Shift+A.
 
-Usage:
-    python3 -m agent.side_panel [--width 380]
-
-Wayland-safe: uses QThread for edge detection (no QTimer → no GLib re-entrancy).
+Wayland-safe: uses self-pipe trick (QSocketNotifier) instead of QTimer/QThread
+signals to avoid GLib re-entrancy crash from Qt6 Wayland compositor roundtrips.
 """
 
 import argparse
 import json
 import logging
+import os
+import select
+import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 from PyQt6.QtCore import (
-    QUrl, Qt, QThread, pyqtSignal, pyqtSlot, QObject,
-    QMetaObject, Q_ARG,
+    QUrl, Qt, QSocketNotifier, QObject, pyqtSlot,
 )
 from PyQt6.QtGui import QGuiApplication, QShortcut, QKeySequence
 from PyQt6.QtQuick import QQuickWindow
@@ -30,76 +31,51 @@ from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 
 logger = logging.getLogger(__name__)
 
-HOVER_ZONE_SIZE = 50  # px from top-left corner
-POLL_INTERVAL = 0.3   # seconds
+HOVER_ZONE_SIZE = 50
+POLL_INTERVAL = 0.3
 
 
-class CursorWatcher(QThread):
-    """Watches cursor position in a separate thread.
-    
-    Emits signals that are delivered via Qt.QueuedConnection,
-    avoiding GLib re-entrancy on Wayland.
-    """
-    enterZone = pyqtSignal()
-    leaveZone = pyqtSignal()
-
-    def __init__(self, zone_size=HOVER_ZONE_SIZE):
-        super().__init__()
-        self._zone_size = zone_size
-        self._running = True
-        self._in_zone = False
-
-    def run(self):
-        while self._running:
-            try:
-                pos = QGuiApplication.cursor().pos()
-                in_zone = pos.x() <= self._zone_size and pos.y() <= self._zone_size
-                if in_zone and not self._in_zone:
-                    self._in_zone = True
-                    self.enterZone.emit()
-                elif not in_zone and self._in_zone:
-                    self._in_zone = False
-                    self.leaveZone.emit()
-            except Exception:
-                pass
-            time.sleep(POLL_INTERVAL)
-
-    def stop(self):
-        self._running = False
+def get_cursor_pos():
+    """Get cursor position using xdotool (no Qt API = no GLib crash)."""
+    try:
+        out = subprocess.check_output(
+            ["xdotool", "getmouselocation", "--shell"],
+            stderr=subprocess.DEVNULL, timeout=1,
+        ).decode()
+        x = y = None
+        for line in out.splitlines():
+            if line.startswith("X="):
+                x = int(line.split("=")[1])
+            elif line.startswith("Y="):
+                y = int(line.split("=")[1])
+        return x, y
+    except Exception:
+        return None, None
 
 
 class AgentBridge(QObject):
-    """Bridge to D-Bus agent — uses polling for status."""
-
-    statusChanged = pyqtSignal(str)
+    """Bridge to D-Bus agent."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._iface = None
-        self._connected = False
         self._connect_dbus()
 
     def _connect_dbus(self):
         bus = QDBusConnection.sessionBus()
         if not bus.isConnected():
-            logger.warning("D-Bus session bus not available")
             return
         self._iface = QDBusInterface(
             "org.kde.aiagent", "/org/kde/aiagent", "org.kde.aiagent", bus,
         )
-        if not self._iface.isValid():
-            logger.warning(f"D-Bus interface not available: {bus.lastError().message()}")
-            self._iface = None
-            return
-        self._connected = True
-        logger.info("QtDBus connected to org.kde.aiagent")
+        if self._iface.isValid():
+            logger.info("QtDBus connected")
 
     @pyqtSlot(str, str)
     def runTask(self, task, files_json):
-        if not self._iface:
-            return
-        files = json.loads(files_json) if files_json else []
-        self._iface.call("RunTask", task, files)
+        if self._iface:
+            files = json.loads(files_json) if files_json else []
+            self._iface.call("RunTask", task, files)
 
     @pyqtSlot()
     def stopTask(self):
@@ -126,7 +102,6 @@ def main():
     app = QGuiApplication(sys.argv)
     app.setApplicationName("KDE AI Agent Panel")
 
-    # Find SidePanel.qml
     here = Path(__file__).parent
     qml_path = next(
         (p for p in [
@@ -139,7 +114,6 @@ def main():
         logger.error("SidePanel.qml not found")
         sys.exit(1)
 
-    # Engine + bridge
     engine = QQmlApplicationEngine()
     bridge = AgentBridge()
     engine.rootContext().setContextProperty("agentBridge", bridge)
@@ -154,15 +128,12 @@ def main():
         logger.error("Root object is not a window")
         sys.exit(1)
 
-    # Position window on left side
     screen = app.primaryScreen()
     geo = screen.availableGeometry() if screen else app.primaryScreen().geometry()
     width = args.width
-    x = geo.x()
-    y = geo.y()
 
-    window.setX(x)
-    window.setY(y)
+    window.setX(geo.x())
+    window.setY(geo.y())
     window.setWidth(width)
     window.setHeight(geo.height())
     window.setFlags(
@@ -172,36 +143,73 @@ def main():
     )
     window.show()
 
-    logger.info(f"Panel: left side, {width}px, pos=({x},{y}), size={width}x{geo.height()}")
+    logger.info(f"Panel: left side, {width}px, size={width}x{geo.height()}")
 
-    # ── Wayland-safe show/hide via QThread signals ──
-    # QTimer on Wayland uses QEventDispatcherGlib → re-entrancy crash.
-    # QThread signals are delivered via Qt.QueuedConnection, safe on Wayland.
+    # ── Self-pipe trick for Wayland-safe show/hide ──
+    # QSocketNotifier uses poll(), NOT GLib timers.
+    # This avoids the Qt6 Wayland GLib re-entrancy crash entirely.
+    r_fd, w_fd = os.pipe()
+    os.set_blocking(w_fd, False)
 
-    def safe_show():
-        QMetaObject.invokeMethod(window, "show", Qt.ConnectionType.QueuedConnection)
-        QMetaObject.invokeMethod(window, "raise_", Qt.ConnectionType.QueuedConnection)
+    def cursor_poller():
+        """Thread: polls cursor via xdotool, writes to pipe."""
+        in_zone = False
+        while True:
+            try:
+                x, y = get_cursor_pos()
+                if x is not None:
+                    now_in = x <= HOVER_ZONE_SIZE and y <= HOVER_ZONE_SIZE
+                    if now_in and not in_zone:
+                        in_zone = True
+                        os.write(w_fd, b"show\n")
+                    elif not now_in and in_zone:
+                        in_zone = False
+                        os.write(w_fd, b"hide\n")
+            except Exception:
+                pass
+            time.sleep(POLL_INTERVAL)
 
-    def safe_hide():
-        QMetaObject.invokeMethod(window, "hide", Qt.ConnectionType.QueuedConnection)
+    poller_thread = threading.Thread(target=cursor_poller, daemon=True)
+    poller_thread.start()
 
-    # Cursor watcher thread
-    watcher = CursorWatcher()
-    watcher.enterZone.connect(safe_show)
-    watcher.leaveZone.connect(safe_hide)
-    watcher.start()
+    # ── Slide in/out via position (no setVisible) ──
+    # setVisible(False) on Wayland breaks subsequent setVisible(True).
+    # Solution: window is always visible, slides off-screen to "hide".
+    panel_x = geo.x()
+    hidden_x = geo.x() - width - 10  # off-screen left
+
+    def slide_in():
+        window.setX(panel_x)
+        window.raise_()
+        window.requestActivate()
+
+    def slide_out():
+        window.setX(hidden_x)
+
+    # Start hidden
+    window.setX(hidden_x)
+
+    def on_pipe_ready(fd):
+        try:
+            data = os.read(fd, 4096)
+            if b"show" in data:
+                slide_in()
+            elif b"hide" in data:
+                slide_out()
+        except Exception:
+            pass
+
+    notifier = QSocketNotifier(r_fd, QSocketNotifier.Type.Read)
+    notifier.activated.connect(lambda fd: on_pipe_ready(fd))
 
     # Global hotkey: Ctrl+Shift+A
     shortcut = QShortcut(QKeySequence("Ctrl+Shift+A"), window)
     def toggle():
-        if window.isVisible():
-            safe_hide()
+        if window.x() == panel_x:
+            slide_out()
         else:
-            safe_show()
+            slide_in()
     shortcut.activated.connect(toggle)
-
-    # Cleanup on exit
-    app.aboutToQuit.connect(watcher.stop)
 
     sys.exit(app.exec())
 
