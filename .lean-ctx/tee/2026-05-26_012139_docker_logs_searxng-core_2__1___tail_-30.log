@@ -1,0 +1,30 @@
+2026-05-25 22:14:26,603 ERROR:searx.engines: loading engine ahmia failed: set engine to inactive!
+2026-05-25 22:14:26,688 ERROR:searx.engines: loading engine torch failed: set engine to inactive!
+2026-05-25 22:14:26,715 WARNING:searx.botdetection.config: missing config file: /etc/searxng/limiter.toml
+[INFO] Started worker-1
+2026-05-25 22:14:26,751 ERROR:searx.searx.search.processor: Init method of engine radio browser failed due to an exception.
+Traceback (most recent call last):
+  File "/usr/local/searxng/searx/search/processors/abstract.py", line 155, in init_engine
+    init_ok = self.engine.init(eng_setting)
+  File "/usr/local/searxng/searx/engines/radio_browser.py", line 62, in init
+    server_list()
+    ~~~~~~~~~~~^^
+  File "/usr/local/searxng/searx/engines/radio_browser.py", line 67, in server_list
+    servers = CACHE.get("servers", [])
+  File "/usr/local/searxng/searx/enginelib/__init__.py", line 175, in get
+    return ENGINES_CACHE.get(key, default=default, ctx=self.table_name)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/searxng/searx/cache.py", line 452, in get
+    self.maintenance()
+    ~~~~~~~~~~~~~~~~^^
+  File "/usr/local/searxng/searx/cache.py", line 266, in maintenance
+    if not force and int(time.time()) < self.next_maintenance_time:
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/searxng/searx/cache.py", line 340, in next_maintenance_time
+    return self.cfg.MAINTENANCE_PERIOD + self.properties.m_time("LAST_MAINTENANCE", int(time.time()))
+                                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/searxng/searx/sqlitedb.py", line 452, in m_time
+    res = self.DB.execute(self.SQL_M_TIME, (name,))
+sqlite3.OperationalError: no such table: properties
+2026-05-25 22:14:26,757 ERROR:searx.search.processors: can't register engine processor: radio browser (init failed)
+2026-05-25 22:15:37,990 ERROR:searx.botdetection: X-Forwarded-For nor X-Real-IP header is set!

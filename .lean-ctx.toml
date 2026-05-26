@@ -1,0 +1,20 @@
+allow_scan = true
+
+[project]
+name = "linux-arch-kde-plasma-side-panel"
+root = "/home/neo/ecosystem/linux-arch-kde-plasma-side-panel"
+
+[archive]
+enabled = true
+threshold_chars = 4096
+max_age_hours = 48
+max_disk_mb = 500
+
+[memory]
+profile = "balanced"
+cleanup = "aggressive"
+
+[cep]
+enabled = true
+
+

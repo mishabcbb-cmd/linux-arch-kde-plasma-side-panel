@@ -1,0 +1,11 @@
+
+# >>> lean-ctx shell hook >>>
+_lc()          { command "$@"; }
+_lc_compress() { command "$@"; }
+if [[ -z "$LEAN_CTX_ACTIVE" && -n "$BASH_EXECUTION_STRING" ]] && command -v lean-ctx &>/dev/null; then
+  if [[ -n "$LEAN_CTX_AGENT" || -n "$CLAUDECODE" || -n "$CODEX_CLI_SESSION" || -n "$GEMINI_SESSION" ]]; then
+    export LEAN_CTX_ACTIVE=1
+    exec lean-ctx -c "$BASH_EXECUTION_STRING"
+  fi
+fi
+# <<< lean-ctx shell hook <<<

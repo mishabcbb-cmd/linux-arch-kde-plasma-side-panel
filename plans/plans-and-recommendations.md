@@ -1,9 +1,9 @@
 # Планы и Рекомендации — KDE AI Agent Panel
 
-**Версия**: 1.0.0
+**Версия**: 1.1.0
 **Дата**: 2026-05-26
 **Автор**: 🏗️ Lead Architect
-**Контекст**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · NVIDIA Wayland
+**Контекст**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · NVIDIA Wayland · llama.cpp Qwen3.6-35B
 
 ---
 
@@ -641,7 +641,110 @@ Phase 4 M5: GPU Acceleration
 
 ---
 
-*Документ создан: 2026-05-26*  
-*Автор: 🏗️ Lead Architect*  
-*Контекст: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · NVIDIA Wayland*  
-*Инструменты: SearXNG research · codebase-memory · lean-ctx · engram*
+## 14. Исследование: Wayland GLib Re-entrancy Crash
+
+### 14.1 Проблема
+
+Qt6 на Wayland использует `QEventDispatcherGlib`. Любой вызов `window.setVisible()`/`show()`/`hide()`/`setX()` из callback'ов `QTimer`, `QThread.pyqtSignal` или `QMetaObject.invokeMethod` вызывает GLib re-entrancy → `QMessageLogger::fatal` → `abort()` (Signal 6).
+
+### 14.2 Испробованные подходы
+
+| Подход | Результат | Причина |
+|--------|-----------|---------|
+| QTimer → window.show() | ❌ Crash | GLib re-entrancy |
+| QThread.pyqtSignal → show() | ❌ Crash | sendPostedEvents re-entrancy |
+| QMetaObject.invokeMethod(QueuedConnection) | ❌ Crash | QueuedConnection всё равно через GLib |
+| Off-screen setX() | ❌ Crash | setX() триггерит compositor roundtrip |
+| Self-pipe trick (os.pipe + QSocketNotifier) | ⚠️ Нестабильно | SIGUSR1 toggle ненадёжен |
+| **QML Window (AppGrid pattern)** | ✅ **Стабильно** | Внутри Plasma QML engine, без GLib |
+
+### 14.3 Решение: AppGrid Pattern
+
+**AppGrid** (xarbit/plasma6-applet-appgrid) использует правильный подход:
+
+1. **C++ плагин** расширяет `Plasma::Applet` — предоставляет `configureWindow()` через `LayerShellQt::Window`
+2. **QML** создаёт `Window` как дочерний компонент через `Component.createObject()`
+3. **Plasmoid.configureWindow(window)** — единственный правильный способ для Wayland
+4. **activationTogglesExpanded: false** + `Plasmoid.activated` сигнал
+
+```qml
+// main.qml — AppGrid pattern
+PlasmoidItem {
+    activationTogglesExpanded: false
+    property GridWindow gridWindow: null
+    property bool gridOpen: false
+
+    Connections {
+        target: Plasmoid
+        function onActivated() { toggleWindow() }
+    }
+
+    function openWindow() {
+        gridOpen = true
+        if (!gridWindow) {
+            gridWindow = gridWindowComponent.createObject(kicker)
+        }
+        gridWindow.showGrid()
+    }
+
+    Component {
+        id: gridWindowComponent
+        GridWindow {}
+    }
+}
+```
+
+```cpp
+// C++ plugin — LayerShellQt::Window
+void AppGridPlugin::configureWayland(QWindow *window) {
+    auto *layer = LayerShellQt::Window::get(window);
+    layer->setLayer(LayerShellQt::Window::LayerTop);
+    layer->setAnchors(AnchorTop | AnchorBottom | AnchorLeft | AnchorRight);
+}
+```
+
+### 14.4 Рекомендация
+
+Создать C++ плагин для нашего плазмода (как в AppGrid), который предоставляет:
+- `configureWindow()` — LayerShellQt для Wayland
+- `updateWindowScreen()` — переключение экранов
+- `setBlurBehind()` — blur эффект
+
+Это единственный способ получить стабильное frameless окно на Wayland.
+
+---
+
+## 15. Исследование: AppGrid Code Analysis
+
+### 15.1 Структура
+
+| Компонент | Файл | Назначение |
+|-----------|------|-----------|
+| C++ Plugin | `src/appgridplugin.cpp` (864 строк) | Plasma::Applet, LayerShellQt, window management |
+| QML Root | `package/contents/ui/main.qml` (123 строки) | PlasmoidItem + Window lifecycle |
+| QML Window | `package/contents/ui/GridWindow.qml` (336 строк) | Overlay window, animations, blur |
+| QML Panel | `package/contents/ui/GridPanel.qml` | Grid content |
+
+### 15.2 Ключевые паттерны
+
+1. **C++ плагин** — `Plasma::Applet` subclass с методами `configureWindow()`, `updateWindowScreen()`, `setBlurBehind()`, `setInputRect()`
+2. **LayerShellQt::Window** — Wayland-native positioning (LayerTop, full screen anchors)
+3. **Window lifecycle** — `Component.createObject()` + `gridOpen` boolean для toggle
+4. **Close on deactivate** — `onActiveChanged` с `deactivateGuard` таймером
+5. **Input rect** — `window->setMask()` для pass-through областей
+6. **Animations** — 11 стилей анимаций через Loader
+
+### 15.3 Применимость к нашему проекту
+
+Для стабильной боковой панели на Wayland нужно:
+1. Создать C++ плагин (как AppGridPlugin) с `configureWindow()` для LayerShellQt
+2. Использовать `Plasmoid.configureWindow(window)` в QML
+3. Позиционировать окно слева (не full screen, а 380px)
+4. Добавить slide animation через `Behavior on x`
+
+---
+
+*Документ создан: 2026-05-26*
+*Автор: 🏗️ Lead Architect*
+*Контекст: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · NVIDIA Wayland · llama.cpp Qwen3.6-35B*
+*Инструменты: SearXNG research · codebase-memory · lean-ctx · engram · AppGrid source analysis*

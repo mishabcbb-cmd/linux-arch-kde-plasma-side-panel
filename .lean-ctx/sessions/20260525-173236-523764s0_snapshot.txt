@@ -1,0 +1,9 @@
+<session_snapshot>
+<config compression="standard" />
+<files>Read: /home/neo/.lean-ctx/config.toml</files>
+<stats>calls=127 saved=3549tok</stats>
+<recovery_queries>
+<query tool="ctx_read" path="/home/neo/.lean-ctx/config.toml" mode="full" />
+<query tool="ctx_search" pattern="config" path="/home/neo/.lean-ctx/" />
+</recovery_queries>
+</session_snapshot>

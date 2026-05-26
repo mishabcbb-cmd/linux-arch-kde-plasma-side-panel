@@ -1,0 +1,476 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-05-25T17:40:59.585049848+00:00",
+  "updated_at": "2026-05-26T20:16:16.001533849+00:00",
+  "next_seq": 27,
+  "events": [
+    {
+      "seq": 1,
+      "created_at": "2026-05-25T17:40:59.585053478+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=true"
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "created_at": "2026-05-25T19:45:27.737310556+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=true"
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "created_at": "2026-05-25T20:12:46.755942228+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=true"
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "created_at": "2026-05-25T20:16:08.879713940+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=true"
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "created_at": "2026-05-25T20:45:55.477663217+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=true"
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "created_at": "2026-05-25T21:59:14.082764802+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_shell",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "created_at": "2026-05-25T22:01:05.831365707+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_shell",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "created_at": "2026-05-26T08:22:07.820764075+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_knowledge",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "created_at": "2026-05-26T09:33:28.198834850+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_provider",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "created_at": "2026-05-26T09:38:58.789335693+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_graph",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=true"
+        }
+      ]
+    },
+    {
+      "seq": 11,
+      "created_at": "2026-05-26T11:21:18.735873958+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 2 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 12,
+      "created_at": "2026-05-26T11:21:28.353210241+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 2 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 13,
+      "created_at": "2026-05-26T13:01:56.717620256+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_search",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 14,
+      "created_at": "2026-05-26T13:35:05.222656924+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_search",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=true"
+        }
+      ]
+    },
+    {
+      "seq": 15,
+      "created_at": "2026-05-26T14:42:44.871820165+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_session",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 16,
+      "created_at": "2026-05-26T16:59:38.475258226+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 17,
+      "created_at": "2026-05-26T16:59:38.496792962+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 2 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 18,
+      "created_at": "2026-05-26T17:03:47.166030200+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 1 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 19,
+      "created_at": "2026-05-26T17:03:47.220275147+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 1 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 20,
+      "created_at": "2026-05-26T17:16:10.235408749+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 1 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 21,
+      "created_at": "2026-05-26T17:53:57.932765867+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_graph",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 22,
+      "created_at": "2026-05-26T18:32:59.580890238+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 3 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 23,
+      "created_at": "2026-05-26T18:33:13.118518984+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 3 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 24,
+      "created_at": "2026-05-26T19:05:10.379794175+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_graph",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    },
+    {
+      "seq": 25,
+      "created_at": "2026-05-26T19:17:05.199039562+00:00",
+      "phase": "post_read",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_read",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "prefetch",
+          "verdict": "run",
+          "reason_code": "after_read",
+          "reason": "bounded prefetch after ctx_read",
+          "detail": "ctx_prefetch: prefetched 3 file(s) (max_files=3)"
+        }
+      ]
+    },
+    {
+      "seq": 26,
+      "created_at": "2026-05-26T20:16:16.001530162+00:00",
+      "phase": "pre_call",
+      "role": "coder",
+      "profile": "coder",
+      "tool": "ctx_graph",
+      "action": null,
+      "decisions": [
+        {
+          "driver": "preload",
+          "verdict": "run",
+          "reason_code": "session_start",
+          "reason": "first tool call in session",
+          "detail": "tool=ctx_overview empty=false"
+        }
+      ]
+    }
+  ]
+}

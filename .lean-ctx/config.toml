@@ -1,0 +1,249 @@
+ultra_compact = false
+tee_mode = "failures"
+output_density = "normal"
+checkpoint_interval = 15
+excluded_commands = []
+passthrough_urls = []
+custom_aliases = []
+slow_command_threshold_ms = 5000
+theme = "default"
+proxy_enabled = false
+buddy_enabled = true
+enable_wakeup_ctx = true
+redirect_exclude = []
+disabled_tools = []
+default_tool_categories = []
+no_degrade = false
+extra_ignore_patterns = []
+terse_agent = "off"
+compression_level = "standard"
+allow_paths = []
+content_defined_chunking = false
+minimal_overhead = false
+shell_hook_disabled = false
+shell_activation = "always"
+update_check_disabled = false
+bm25_max_cache_mb = 128
+graph_index_max_files = 0
+memory_profile = "balanced"
+memory_cleanup = "aggressive"
+max_ram_percent = 5
+savings_footer = "never"
+response_verbosity = "full"
+allow_auto_reroot = false
+sandbox_level = 0
+reference_results = false
+agent_token_budget = 0
+shell_allowlist = [
+    "git",
+    "gh",
+    "svn",
+    "cargo",
+    "npm",
+    "npx",
+    "yarn",
+    "pnpm",
+    "bun",
+    "make",
+    "cmake",
+    "pip",
+    "pip3",
+    "poetry",
+    "uv",
+    "go",
+    "mvn",
+    "gradle",
+    "mix",
+    "dotnet",
+    "swift",
+    "zig",
+    "rustup",
+    "rustc",
+    "ls",
+    "cat",
+    "head",
+    "tail",
+    "wc",
+    "sort",
+    "uniq",
+    "tr",
+    "cut",
+    "grep",
+    "rg",
+    "find",
+    "fd",
+    "ag",
+    "ack",
+    "sed",
+    "awk",
+    "echo",
+    "printf",
+    "true",
+    "false",
+    "test",
+    "expr",
+    "cd",
+    "pwd",
+    "basename",
+    "dirname",
+    "realpath",
+    "readlink",
+    "cp",
+    "mv",
+    "mkdir",
+    "rm",
+    "rmdir",
+    "touch",
+    "ln",
+    "chmod",
+    "diff",
+    "patch",
+    "tar",
+    "zip",
+    "unzip",
+    "gzip",
+    "gunzip",
+    "zstd",
+    "curl",
+    "wget",
+    "docker",
+    "docker-compose",
+    "podman",
+    "node",
+    "python",
+    "python3",
+    "ruby",
+    "perl",
+    "java",
+    "javac",
+    "tsc",
+    "eslint",
+    "prettier",
+    "black",
+    "ruff",
+    "clippy",
+    "jq",
+    "yq",
+    "xargs",
+    "env",
+    "which",
+    "type",
+    "file",
+    "stat",
+    "date",
+    "sleep",
+    "timeout",
+    "nice",
+    "ionice",
+    "lean-ctx",
+]
+
+[cloud]
+contribute_enabled = false
+
+[autonomy]
+enabled = true
+auto_preload = true
+auto_dedup = true
+auto_related = true
+auto_consolidate = true
+silent_preload = true
+dedup_threshold = 8
+consolidate_every_calls = 25
+consolidate_cooldown_secs = 120
+cognition_loop_enabled = true
+cognition_loop_interval_secs = 3600
+cognition_loop_max_steps = 8
+
+[providers]
+enabled = true
+auto_index = true
+cache_ttl_secs = 120
+
+[providers.github]
+enabled = true
+
+[providers.gitlab]
+enabled = true
+
+[providers.mcp_bridges]
+
+[proxy]
+
+[loop_detection]
+normal_threshold = 2
+reduced_threshold = 4
+blocked_threshold = 0
+window_secs = 300
+search_group_limit = 10
+
+[loop_detection.tool_total_limits]
+ctx_search = 80
+ctx_read = 100
+ctx_semantic_search = 60
+ctx_shell = 50
+
+[archive]
+enabled = true
+threshold_chars = 4096
+max_age_hours = 48
+max_disk_mb = 500
+
+[memory.knowledge]
+max_facts = 200
+max_patterns = 50
+max_history = 100
+contradiction_threshold = 0.5
+recall_facts_limit = 10
+rooms_limit = 25
+timeline_limit = 25
+relations_limit = 40
+
+[memory.episodic]
+max_episodes = 500
+max_actions_per_episode = 50
+summary_max_chars = 200
+
+[memory.procedural]
+min_repetitions = 3
+min_sequence_len = 2
+max_procedures = 100
+max_window_size = 10
+
+[memory.lifecycle]
+decay_rate = 0.009999999776482582
+low_confidence_threshold = 0.30000001192092896
+stale_days = 30
+similarity_threshold = 0.8500000238418579
+
+[memory.embeddings]
+max_facts = 2000
+
+[memory.gotcha]
+max_gotchas_per_project = 100
+retrieval_budget_per_room = 10
+default_decay_rate = 0.029999999329447746
+
+[memory.gotcha.category_decay_overrides]
+
+[updates]
+auto_update = true
+check_interval_hours = 6
+notify_only = false
+
+[lsp]
+
+[ide_paths]
+
+[model_context_windows]
+
+[boundary_policy]
+cross_project_search = false
+cross_project_import = false
+audit_cross_access = true
+universal_gotchas_enabled = true
+
+[secret_detection]
+enabled = true
+redact = false
+custom_patterns = []

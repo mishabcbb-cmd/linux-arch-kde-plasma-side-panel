@@ -1,0 +1,9 @@
+{
+  "id": "06787999d7e2b573",
+  "tool": "ctx_shell",
+  "command": "curl -s --connect-timeout 5 -X POST http://127.0.0.1:8080/search -H \"Content-Type: application/x-www-form-urlencoded\" -d \"q=KDE+Plasma+6+sidebar+widget+QML&format=json&engines=google,duckduckg,github&language=en\" 2>&1 | head -200",
+  "size_chars": 6657,
+  "size_tokens": 2069,
+  "created_at": "2026-05-25T22:48:40.475776414Z",
+  "session_id": "20260525-173236-523764s0"
+}

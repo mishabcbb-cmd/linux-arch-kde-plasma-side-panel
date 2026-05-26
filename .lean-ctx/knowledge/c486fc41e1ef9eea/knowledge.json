@@ -1,0 +1,88 @@
+{
+  "project_root": "/home/neo/ecosystem/linux-arch-kde-plasma-side-panel",
+  "project_hash": "c486fc41e1ef9eea",
+  "facts": [
+    {
+      "category": "architecture",
+      "key": "gcc-16-project-analysis",
+      "value": "GCC 16.1.1 installed on system (Arch Linux 2026-04-30). Project uses Python 3.14 with C-extensions (dbus-python, PyGObject, tree-sitter, PyQt6). No native C/C++ source in project — C-extensions are pre-built .so files. GCC 16 features apply via: LTO thin (-flto=thin), PGO (-fprofile-generate/use), -Wc11-c23-compat, -fauto-profile-inlining, -ffold-mem-offsets. QML has LOW direct GCC impact. ADR saved to plans/gcc-16-architecture-decision-record.md.",
+      "source_session": "20260526-093725-855611s0",
+      "confidence": 0.8,
+      "created_at": "2026-05-26T09:57:11.899294572Z",
+      "last_confirmed": "2026-05-26T09:57:11.899294572Z",
+      "retrieval_count": 0,
+      "last_retrieved": null,
+      "valid_from": "2026-05-26T09:57:11.899294572Z",
+      "valid_until": null,
+      "supersedes": null,
+      "confirmation_count": 1,
+      "feedback_up": 0,
+      "feedback_down": 0,
+      "last_feedback": null,
+      "privacy": "project_only",
+      "imported_from": null,
+      "archetype": "fact",
+      "fidelity": null
+    }
+  ],
+  "patterns": [],
+  "history": [
+    {
+      "summary": "consolidate@2026-05-26 session=20260526-093725-855611s0 task=\"(no task)\" decisions=0 findings=0",
+      "from_sessions": [
+        "20260526-093725-855611s0"
+      ],
+      "timestamp": "2026-05-26T09:58:32.849533995Z"
+    },
+    {
+      "summary": "consolidate@2026-05-26 session=20260526-093725-855611s0 task=\"(no task)\" decisions=0 findings=0",
+      "from_sessions": [
+        "20260526-093725-855611s0"
+      ],
+      "timestamp": "2026-05-26T10:01:29.824354309Z"
+    },
+    {
+      "summary": "consolidate@2026-05-26 session=20260526-093725-855611s0 task=\"(no task)\" decisions=0 findings=0",
+      "from_sessions": [
+        "20260526-093725-855611s0"
+      ],
+      "timestamp": "2026-05-26T10:04:37.812080139Z"
+    },
+    {
+      "summary": "consolidate@2026-05-26 session=20260526-093725-855611s0 task=\"(no task)\" decisions=0 findings=0",
+      "from_sessions": [
+        "20260526-093725-855611s0"
+      ],
+      "timestamp": "2026-05-26T10:10:59.370512048Z"
+    },
+    {
+      "summary": "consolidate@2026-05-26 session=20260526-093725-855611s0 task=\"(no task)\" decisions=0 findings=0",
+      "from_sessions": [
+        "20260526-093725-855611s0"
+      ],
+      "timestamp": "2026-05-26T10:28:25.483007281Z"
+    },
+    {
+      "summary": "consolidate@2026-05-26 session=20260526-093725-855611s0 task=\"(no task)\" decisions=0 findings=0",
+      "from_sessions": [
+        "20260526-093725-855611s0"
+      ],
+      "timestamp": "2026-05-26T11:28:04.477896460Z"
+    },
+    {
+      "summary": "consolidate@2026-05-26 session=20260526-093725-855611s0 task=\"(no task)\" decisions=0 findings=0",
+      "from_sessions": [
+        "20260526-093725-855611s0"
+      ],
+      "timestamp": "2026-05-26T11:43:42.188457441Z"
+    },
+    {
+      "summary": "consolidate@2026-05-26 session=20260526-093725-855611s0 task=\"(no task)\" decisions=0 findings=0",
+      "from_sessions": [
+        "20260526-093725-855611s0"
+      ],
+      "timestamp": "2026-05-26T12:00:07.516396019Z"
+    }
+  ],
+  "updated_at": "2026-05-26T12:00:07.516396097Z"
+}

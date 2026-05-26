@@ -1,0 +1,528 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-05-25T20:17:33.937717677Z",
+  "version": "3.6.17",
+  "setup_report": {
+    "schema_version": 1,
+    "started_at": "2026-05-25T13:01:25.497338509Z",
+    "finished_at": "2026-05-25T13:01:26.471268456Z",
+    "success": true,
+    "platform": {
+      "os": "linux",
+      "arch": "x86_64"
+    },
+    "steps": [
+      {
+        "name": "shell_hook",
+        "ok": true,
+        "items": [
+          {
+            "name": "env_sh",
+            "status": "skipped",
+            "path": null,
+            "note": "not a container environment"
+          },
+          {
+            "name": "init --global",
+            "status": "ran",
+            "path": null,
+            "note": null
+          },
+          {
+            "name": "universal_shell_hook",
+            "status": "installed",
+            "path": null,
+            "note": "~/.zshenv, ~/.bashenv, agent aliases"
+          }
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "name": "daemon",
+        "ok": true,
+        "items": [
+          {
+            "name": "serve --daemon",
+            "status": "restarted",
+            "path": "/home/neo/.local/share/lean-ctx/daemon.sock",
+            "note": "CLI commands can route via IPC when running"
+          }
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "name": "editors",
+        "ok": true,
+        "items": [
+          {
+            "name": "Cursor",
+            "status": "not_detected",
+            "path": "~/.cursor/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Claude Code",
+            "status": "not_detected",
+            "path": "~/.claude.json",
+            "note": null
+          },
+          {
+            "name": "Augment CLI",
+            "status": "not_detected",
+            "path": "~/.augment/settings.json",
+            "note": null
+          },
+          {
+            "name": "Augment (VS Code)",
+            "status": "not_detected",
+            "path": "~/.config/Code/User/globalStorage/augment.vscode-augment/augment-global-state/mcpServers.json",
+            "note": null
+          },
+          {
+            "name": "Windsurf",
+            "status": "not_detected",
+            "path": "~/.codeium/windsurf/mcp_config.json",
+            "note": null
+          },
+          {
+            "name": "Codex CLI",
+            "status": "not_detected",
+            "path": "~/.codex/config.toml",
+            "note": null
+          },
+          {
+            "name": "Gemini CLI",
+            "status": "not_detected",
+            "path": "~/.gemini/settings.json",
+            "note": null
+          },
+          {
+            "name": "Antigravity IDE",
+            "status": "not_detected",
+            "path": "~/.gemini/antigravity/mcp_config.json",
+            "note": null
+          },
+          {
+            "name": "Antigravity CLI",
+            "status": "not_detected",
+            "path": "~/.gemini/antigravity-cli/mcp_config.json",
+            "note": null
+          },
+          {
+            "name": "Zed",
+            "status": "not_detected",
+            "path": "~/.config/zed/settings.json",
+            "note": null
+          },
+          {
+            "name": "VS Code",
+            "status": "not_detected",
+            "path": "~/.config/Code/User/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Copilot CLI",
+            "status": "not_detected",
+            "path": "~/.copilot/mcp-config.json",
+            "note": null
+          },
+          {
+            "name": "OpenCode",
+            "status": "not_detected",
+            "path": "~/.config/opencode/opencode.json",
+            "note": null
+          },
+          {
+            "name": "Qwen Code",
+            "status": "not_detected",
+            "path": "~/.qwen/settings.json",
+            "note": null
+          },
+          {
+            "name": "Trae",
+            "status": "not_detected",
+            "path": "~/.trae/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Amazon Q Developer",
+            "status": "not_detected",
+            "path": "~/.aws/amazonq/default.json",
+            "note": null
+          },
+          {
+            "name": "JetBrains IDEs",
+            "status": "not_detected",
+            "path": "~/.jb-mcp.json",
+            "note": null
+          },
+          {
+            "name": "Cline",
+            "status": "not_detected",
+            "path": "~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json",
+            "note": null
+          },
+          {
+            "name": "Roo Code",
+            "status": "already",
+            "path": "~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/cline_mcp_settings.json",
+            "note": "mode=Hybrid"
+          },
+          {
+            "name": "AWS Kiro",
+            "status": "not_detected",
+            "path": "~/.kiro/settings/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Verdent",
+            "status": "not_detected",
+            "path": "~/.verdent/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Crush",
+            "status": "not_detected",
+            "path": "~/.config/crush/crush.json",
+            "note": null
+          },
+          {
+            "name": "Pi Coding Agent",
+            "status": "not_detected",
+            "path": "~/.pi/agent/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Amp",
+            "status": "not_detected",
+            "path": "~/.config/amp/settings.json",
+            "note": null
+          },
+          {
+            "name": "QoderWork",
+            "status": "not_detected",
+            "path": "~/.qoderwork/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Hermes Agent",
+            "status": "not_detected",
+            "path": "~/.hermes/config.yaml",
+            "note": null
+          },
+          {
+            "name": "Aider",
+            "status": "not_detected",
+            "path": "~/.aider/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Continue",
+            "status": "not_detected",
+            "path": "~/.continue/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Neovim (mcphub.nvim)",
+            "status": "not_detected",
+            "path": "~/.config/mcphub/servers.json",
+            "note": null
+          },
+          {
+            "name": "Emacs (mcp.el)",
+            "status": "not_detected",
+            "path": "~/.emacs.d/mcp.json",
+            "note": null
+          },
+          {
+            "name": "Sublime Text",
+            "status": "not_detected",
+            "path": "~/.config/sublime-text/mcp.json",
+            "note": null
+          },
+          {
+            "name": "OpenClaw",
+            "status": "not_detected",
+            "path": "~/.openclaw/openclaw.json",
+            "note": null
+          },
+          {
+            "name": "Qoder",
+            "status": "not_detected",
+            "path": "~/.qoder/mcp.json",
+            "note": null
+          }
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "name": "agent_rules",
+        "ok": true,
+        "items": [
+          {
+            "name": "VS Code",
+            "status": "injected",
+            "path": null,
+            "note": null
+          },
+          {
+            "name": "Roo Code",
+            "status": "already",
+            "path": null,
+            "note": null
+          }
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "name": "agent_hooks",
+        "ok": true,
+        "items": [
+          {
+            "name": "Roo Code hooks",
+            "status": "installed",
+            "path": "/home/neo/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline",
+            "note": "mode=Hybrid; merge-based install/repair (preserves other hooks/plugins); MCP config updated"
+          }
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "name": "proxy",
+        "ok": true,
+        "items": [
+          {
+            "name": "proxy",
+            "status": "skipped",
+            "path": null,
+            "note": "Proxy not enabled (run `lean-ctx proxy enable`)"
+          }
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "name": "doctor_compact",
+        "ok": true,
+        "items": [
+          {
+            "name": "doctor",
+            "status": "4/6",
+            "path": null,
+            "note": null
+          }
+        ],
+        "warnings": [
+          "doctor compact not fully passing: 4/6"
+        ],
+        "errors": []
+      },
+      {
+        "name": "project_root",
+        "ok": true,
+        "items": [
+          {
+            "name": "project_root",
+            "status": "unconfigured",
+            "path": null,
+            "note": "Set LEAN_CTX_PROJECT_ROOT or add project_root to config.toml"
+          }
+        ],
+        "warnings": [
+          "No project_root configured. Running from $HOME can cause excessive scanning. Set via: lean-ctx config set project_root /path/to/project"
+        ],
+        "errors": []
+      }
+    ],
+    "warnings": [],
+    "errors": []
+  },
+  "doctor_compact_passed": 5,
+  "doctor_compact_total": 6,
+  "mcp_targets": [
+    {
+      "name": "VS Code",
+      "detected": true,
+      "config_path": "/home/neo/.config/Code/User/mcp.json",
+      "state": "configured",
+      "note": null
+    },
+    {
+      "name": "Roo Code",
+      "detected": true,
+      "config_path": "/home/neo/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/cline_mcp_settings.json",
+      "state": "configured",
+      "note": null
+    }
+  ],
+  "rules_targets": [
+    {
+      "name": "Claude Code",
+      "detected": false,
+      "path": "/home/neo/.claude/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Gemini CLI",
+      "detected": false,
+      "path": "/home/neo/.gemini/GEMINI.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "VS Code",
+      "detected": true,
+      "path": "/home/neo/.config/Code/User/github-copilot-instructions.md",
+      "state": "up_to_date",
+      "note": null
+    },
+    {
+      "name": "Copilot CLI",
+      "detected": false,
+      "path": "/home/neo/.copilot/instructions.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Cursor",
+      "detected": false,
+      "path": "/home/neo/.cursor/rules/lean-ctx.mdc",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Windsurf",
+      "detected": false,
+      "path": "/home/neo/.codeium/windsurf/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Zed",
+      "detected": false,
+      "path": "/home/neo/.config/zed/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Cline",
+      "detected": false,
+      "path": "/home/neo/.cline/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Roo Code",
+      "detected": true,
+      "path": "/home/neo/.roo/rules/lean-ctx.md",
+      "state": "up_to_date",
+      "note": null
+    },
+    {
+      "name": "OpenCode",
+      "detected": false,
+      "path": "/home/neo/.config/opencode/AGENTS.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Continue",
+      "detected": false,
+      "path": "/home/neo/.continue/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Amp",
+      "detected": false,
+      "path": "/home/neo/.ampcoder/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Qwen Code",
+      "detected": false,
+      "path": "/home/neo/.qwen/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Trae",
+      "detected": false,
+      "path": "/home/neo/.trae/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Amazon Q Developer",
+      "detected": false,
+      "path": "/home/neo/.aws/amazonq/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "JetBrains IDEs",
+      "detected": false,
+      "path": "/home/neo/.jb-rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Antigravity",
+      "detected": false,
+      "path": "/home/neo/.gemini/antigravity/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Pi Coding Agent",
+      "detected": false,
+      "path": "/home/neo/.pi/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "AWS Kiro",
+      "detected": false,
+      "path": "/home/neo/.kiro/steering/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Verdent",
+      "detected": false,
+      "path": "/home/neo/.verdent/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Crush",
+      "detected": false,
+      "path": "/home/neo/.config/crush/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "Augment",
+      "detected": false,
+      "path": "/home/neo/.augment/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    },
+    {
+      "name": "OpenClaw",
+      "detected": false,
+      "path": "/home/neo/.openclaw/rules/lean-ctx.md",
+      "state": "not_detected",
+      "note": null
+    }
+  ],
+  "warnings": [],
+  "errors": []
+}
