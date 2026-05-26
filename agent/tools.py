@@ -1,4 +1,4 @@
-"""
+a"""
 agent/tools.py — Tool implementations for the KDE AI Agent.
 
 Provides:

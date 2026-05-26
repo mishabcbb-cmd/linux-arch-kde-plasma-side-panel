@@ -11,6 +11,9 @@
  *
  * Streaming pattern from end4 (Ai.qml): tokens append to the last message
  * as they arrive via D-Bus signal, rather than creating new blocks each time.
+ *
+ * Accepts messages as a plain JS array via the `messages` property.
+ * Each message: { type, content, toolName?, options?, _streaming? }
  */
 
 import QtQuick
@@ -25,10 +28,21 @@ ScrollView {
     contentWidth: availableWidth
 
     property var messages: []
-    property alias listView: messageList
+    signal provideUserResponse(string response)
 
-    // Auto-scroll to bottom when new messages arrive
+    // Sync messages array → ListModel
     onMessagesChanged: {
+        messageModel.clear()
+        for (var i = 0; i < messages.length; i++) {
+            var msg = messages[i]
+            messageModel.append({
+                type: msg.type || "thought",
+                content: msg.content || "",
+                toolName: msg.toolName || "",
+                options: msg.options || [],
+                _streaming: msg._streaming || false,
+            })
+        }
         if (messageList.count > 0) {
             messageList.positionViewAtEnd()
         }
@@ -106,9 +120,7 @@ ScrollView {
                             delegate: PlasmaComponents.Button {
                                 text: modelData
                                 onClicked: {
-                                    if (typeof root !== 'undefined' && root.provideUserResponse) {
-                                        root.provideUserResponse(modelData)
-                                    }
+                                    chatScrollView.provideUserResponse(modelData)
                                 }
                             }
                         }

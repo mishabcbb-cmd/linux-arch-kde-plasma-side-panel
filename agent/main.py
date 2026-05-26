@@ -228,18 +228,21 @@ if dbus_available:
 
         @dbus.service.method("org.kde.aiagent", in_signature="", out_signature="")
         def TogglePanel(self) -> None:
-            """Toggle the side panel visibility (called from KWin script)."""
-            logger.info("D-Bus TogglePanel")
-            import subprocess
-            import os
-            panel_script = os.path.join(
-                os.path.dirname(__file__), "side_panel.py"
-            )
-            subprocess.Popen(
-                [sys.executable, panel_script, "--width", "380"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+            """Toggle the side panel visibility.
+            
+            Now delegates to the QML plasmoid via Plasma's activation mechanism.
+            The plasmoid (org.kde.plasma.ai-agent-panel) handles Meta+A shortcut
+            and creates/destroys the SidePanelWindow.
+            
+            This method is kept for backward compatibility with the KWin script.
+            It emits a StatusChanged signal that the QML panel can detect.
+            """
+            logger.info("D-Bus TogglePanel called — QML plasmoid handles toggling via Meta+A")
+            # Emit a signal so the QML listener can react
+            self.StatusChanged("toggle_requested", json.dumps({
+                "status": "toggle_requested",
+                "message": "QML plasmoid handles toggling via Meta+A shortcut"
+            }))
 
         @dbus.service.signal("org.kde.aiagent", signature="ss")
         def StatusChanged(self, status: str, data: str) -> None:
