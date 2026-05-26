@@ -1,11 +1,10 @@
-# cmake/BuildLlama.cmake.in — Build llama.cpp from local source
+# cmake/BuildLlama.cmake.in — Build llama.cpp (turboquant_plus fork) from local source
 #
-# Uses the existing llama.cpp checkout at thetom.cpp for local inference.
+# Uses the existing turboquant_plus checkout at thetom.cpp for local inference.
+# Fork: https://github.com/TheTom/turboquant_plus
 # Provides the `llama` target for linking into rag_native.
-#
-# Pattern: Jarvis CMakeLists.txt FetchContent + thetom.cpp local build
 
-message(STATUS "Building llama.cpp from local source: /home/neo/ecosystem/thetom.cpp")
+message(STATUS "Building llama.cpp (turboquant_plus) from local source: /home/neo/ecosystem/thetom.cpp")
 
 set(LLAMA_SOURCE_DIR "/home/neo/ecosystem/thetom.cpp")
 
