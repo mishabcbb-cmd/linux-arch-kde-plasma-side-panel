@@ -17,9 +17,12 @@ from .llm_client import (
     create_provider,
     create_provider_from_config,
 )
+from .mcp_client import MCPClientManager, MCPServerConfig, MCPToolInfo
+from .mcp_server import MCPToolServer, MCPStdioTransport, MCPSSETransport
+from .rag import RAGEngine, SearchResult, chunk_text
 from .tools import ToolRegistry, ToolResult
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = [
     "AgentLoop", "AgentSignalType", "AgentStatus",
     "ContextManager",
@@ -27,5 +30,8 @@ __all__ = [
     "LlamaCppProvider", "OllamaProvider", "OpenAICompatibleProvider",
     "OpenRouterProvider", "ProviderResponse", "StreamEvent", "TokenUsage",
     "create_provider", "create_provider_from_config",
+    "MCPClientManager", "MCPServerConfig", "MCPToolInfo",
+    "MCPToolServer", "MCPStdioTransport", "MCPSSETransport",
+    "RAGEngine", "SearchResult", "chunk_text",
     "ToolRegistry", "ToolResult",
 ]

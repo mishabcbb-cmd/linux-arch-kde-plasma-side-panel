@@ -393,12 +393,12 @@ chmod +x install.sh
 | Config persistence | [`contents/config/main.xml`](plasmoid/ai-agent-panel/contents/config/main.xml) | KConfig XSD schema with 17 persisted entries. All 3 config pages bound to `Plasmoid.configuration`. | ✅ Done |
 | filetree_helper.py | [`contents/ui/filetree_helper.py`](plasmoid/ai-agent-panel/contents/ui/filetree_helper.py) | Python helper for directory listing via DataSource executable engine. JSON output with file metadata. | ✅ Done |
 
-#### M2 — Test Coverage & MCP Config UI (📌 P1)
+#### M2 — Test Coverage & MCP Config UI (📌 P1) ✅
 
-| Task | Files | Description |
-|------|-------|-------------|
-| Pytest suite | `tests/` (new) | Unit tests for MCP server/client, RAG engine, tool registry. Mock D-Bus and LLM. |
-| MCP server config UI | [`contents/config/ConfigApi.qml`](plasmoid/ai-agent-panel/contents/config/ConfigApi.qml) | UI for adding/removing external MCP servers (name, transport, command, args, auto-approve list). |
+| Task | Files | Description | Status |
+|------|-------|-------------|--------|
+| Pytest suite | [`tests/`](tests/) | 80 unit tests: MCP server (13), MCP client (19), RAG engine (24), ToolRegistry (24). 6 integration tests skipped (require ChromaDB). | ✅ Done |
+| MCP server config UI | [`contents/config/ConfigApi.qml`](plasmoid/ai-agent-panel/contents/config/ConfigApi.qml) | UI for adding/removing external MCP servers (name, transport, command, args, auto-approve list). | 🔄 Next |
 
 #### M3 — Cross-repo AI (📌 P1)
 
