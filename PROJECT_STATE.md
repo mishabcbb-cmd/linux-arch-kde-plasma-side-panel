@@ -1,6 +1,6 @@
 # KDE AI Agent Panel — Project State
 
-**Version**: 0.3.0
+**Version**: 1.0.0
 **Date**: 2026-05-26
 **Arch**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1
 
@@ -289,6 +289,9 @@ cd linux-arch-kde-plasma-side-panel
 chmod +x install.sh
 ./install.sh
 ```
+
+> **Git history**: Clean slate — all previous fork history (beellama.cpp, thetom.cpp, etc.) removed.
+> Repository initialized fresh with a single root commit containing only project files.
 
 ### 8.2 What install.sh Does (8 Steps)
 
