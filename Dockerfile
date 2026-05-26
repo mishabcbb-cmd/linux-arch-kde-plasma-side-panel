@@ -6,14 +6,14 @@
 # Note: For full KDE Plasma integration, run natively.
 # This image is for headless/API mode.
 
-FROM archlinux:latest AS builder
+FROM archlinux:patched AS builder
 
 # System deps
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
-        python python-pip python-dbus \
+        python python-pip python-dbus pkgconf cairo gobject-introspection \
         cmake gcc pybind11 \
-        ripgrep tree-sitter \
+        gcc ripgrep tree-sitter \
         git \
     && pacman -Scc --noconfirm
 
@@ -33,12 +33,12 @@ RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build -j$(nproc) || echo "Native build optional"
 
 # Runtime stage
-FROM archlinux:latest
+FROM archlinux:patched
 
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
-        python python-pip python-dbus \
-        ripgrep tree-sitter \
+        python python-pip python-dbus pkgconf cairo gobject-introspection \
+        gcc ripgrep tree-sitter \
         espeak-ng \
     && pacman -Scc --noconfirm
 
