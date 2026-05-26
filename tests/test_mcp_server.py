@@ -45,12 +45,13 @@ class TestMCPToolServer:
             assert "inputSchema" in tool
 
     def test_tool_definitions_include_all_tools(self, mock_tool_registry: MockToolRegistry):
-        """Should include all 9 registered tools."""
+        """Should include all 12 registered tools."""
         server = MCPToolServer(mock_tool_registry)
         tool_names = {t["name"] for t in server.get_tool_definitions()}
         expected = {"bash_exec", "file_read", "file_write", "search_codebase",
                      "repo_map", "run_tests", "ask_user",
-                     "cross_repo_search", "cross_repo_trace"}
+                     "cross_repo_search", "cross_repo_trace",
+                     "system_monitor", "voice_input", "tts_output"}
         assert tool_names == expected
 
     def test_execute_tool_success(self, mock_tool_registry: MockToolRegistry):

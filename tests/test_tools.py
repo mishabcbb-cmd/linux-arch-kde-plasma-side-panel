@@ -65,9 +65,9 @@ class TestToolRegistry:
     """Tests for ToolRegistry — tool registration and schema generation."""
 
     def test_init(self):
-        """Should initialize with 9 registered tools."""
+        """Should initialize with 12 registered tools."""
         registry = ToolRegistry()
-        assert len(registry._tools) == 9
+        assert len(registry._tools) == 12
 
     def test_register_custom_tool(self):
         """Should allow registering custom tools."""
@@ -84,7 +84,7 @@ class TestToolRegistry:
         registry = ToolRegistry()
         schemas = registry.get_tool_schemas()
         assert isinstance(schemas, list)
-        assert len(schemas) == 9
+        assert len(schemas) == 12
 
     def test_tool_schemas_have_required_fields(self):
         """Each schema should have name, description, input_schema."""
@@ -95,12 +95,13 @@ class TestToolRegistry:
             assert "input_schema" in schema
 
     def test_tool_schemas_include_all_tools(self):
-        """Should include all 9 default tools."""
+        """Should include all 12 default tools."""
         registry = ToolRegistry()
         names = {s["name"] for s in registry.get_tool_schemas()}
         expected = {"bash_exec", "file_read", "file_write", "search_codebase",
                      "repo_map", "run_tests", "ask_user",
-                     "cross_repo_search", "cross_repo_trace"}
+                     "cross_repo_search", "cross_repo_trace",
+                     "system_monitor", "voice_input", "tts_output"}
         assert names == expected
 
     def test_execute_known_tool(self, mock_tool_registry: MockToolRegistry):

@@ -16,6 +16,7 @@ end4 (function calling schema), ZooCode/RooCode (tool result handling).
 
 import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -308,6 +309,70 @@ class ToolRegistry:
                         },
                     },
                     "required": ["function_name", "project"],
+                },
+            },
+            {
+                "name": "system_monitor",
+                "description": (
+                    "Get real-time system metrics: CPU usage, memory usage, CPU temperature, "
+                    "disk usage, uptime, and kernel version. Reads from /proc filesystem. "
+                    "Use this to diagnose performance issues or check system health."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "metrics": {
+                            "type": "string",
+                            "description": "Comma-separated list of metrics to fetch: cpu, memory, temp, disk, uptime, all (default: all)",
+                        },
+                    },
+                },
+            },
+            {
+                "name": "voice_input",
+                "description": (
+                    "Record audio from the microphone and transcribe it to text using "
+                    "whisper.cpp or a system speech-to-text engine. "
+                    "Use this to accept voice commands instead of typing."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "duration": {
+                            "type": "integer",
+                            "description": "Recording duration in seconds (default: 5, max: 30)",
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Language code for transcription (default: 'en')",
+                        },
+                    },
+                },
+            },
+            {
+                "name": "tts_output",
+                "description": (
+                    "Convert text to speech and play it through the system speakers. "
+                    "Uses system TTS engine (espeak-ng, festival, or speech-dispatcher). "
+                    "Use this to read responses aloud or provide audio feedback."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "Text to convert to speech",
+                        },
+                        "voice": {
+                            "type": "string",
+                            "description": "Voice name or language (default: 'en')",
+                        },
+                        "speed": {
+                            "type": "integer",
+                            "description": "Speech speed in words per minute (default: 150, range: 80-450)",
+                        },
+                    },
+                    "required": ["text"],
                 },
             },
         ]
@@ -1082,3 +1147,269 @@ class ToolRegistry:
                 success=False,
                 error=f"Cross-repo trace failed: {exc}",
             )
+
+    # ========================================================================
+    # System Monitoring (pattern: Jarvis readCpuUsage, readMemoryUsage, readCpuTemp)
+    # ========================================================================
+
+    def _system_monitor(self, args: Dict[str, Any]) -> ToolResult:
+        """Get real-time system metrics by reading /proc filesystem.
+
+        Pattern from Jarvis: jarvissystem.cpp readCpuUsage, readMemoryUsage, readCpuTemp
+        """
+        metrics_str = args.get("metrics", "all").lower()
+        requested = [m.strip() for m in metrics_str.split(",")]
+        want_all = "all" in requested
+
+        result_parts = []
+
+        # ── CPU Usage (pattern: Jarvis /proc/stat) ──
+        if want_all or "cpu" in requested:
+            try:
+                with open("/proc/stat") as f:
+                    line = f.readline()
+                parts = line.split()
+                if parts and parts[0] == "cpu" and len(parts) >= 8:
+                    user, nice, sys, idle = int(parts[1]), int(parts[2]), int(parts[3]), int(parts[4])
+                    total = user + nice + sys + idle + int(parts[5]) + int(parts[6]) + int(parts[7])
+                    # Read again after short delay for delta
+                    import time
+                    time.sleep(0.1)
+                    with open("/proc/stat") as f:
+                        line2 = f.readline()
+                    parts2 = line2.split()
+                    if parts2 and parts2[0] == "cpu" and len(parts2) >= 8:
+                        idle2 = int(parts2[4])
+                        total2 = sum(int(parts2[i]) for i in range(1, 8))
+                        total_diff = total2 - total
+                        idle_diff = idle2 - idle
+                        if total_diff > 0:
+                            cpu_pct = 100.0 * (1.0 - idle_diff / total_diff)
+                            result_parts.append(f"CPU Usage: {cpu_pct:.1f}%")
+            except Exception as exc:
+                result_parts.append(f"CPU: error ({exc})")
+
+        # ── Memory Usage (pattern: Jarvis /proc/meminfo) ──
+        if want_all or "memory" in requested:
+            try:
+                with open("/proc/meminfo") as f:
+                    content = f.read()
+                mem_total = mem_available = 0
+                for line in content.splitlines():
+                    if line.startswith("MemTotal:"):
+                        mem_total = int(line.split()[1])
+                    elif line.startswith("MemAvailable:"):
+                        mem_available = int(line.split()[1])
+                    if mem_total > 0 and mem_available > 0:
+                        break
+                if mem_total > 0:
+                    used_gb = (mem_total - mem_available) / 1048576.0
+                    total_gb = mem_total / 1048576.0
+                    pct = 100.0 * (mem_total - mem_available) / mem_total
+                    result_parts.append(f"Memory: {used_gb:.1f}GB / {total_gb:.1f}GB ({pct:.1f}%)")
+            except Exception as exc:
+                result_parts.append(f"Memory: error ({exc})")
+
+        # ── CPU Temperature (pattern: Jarvis /sys/class/thermal) ──
+        if want_all or "temp" in requested:
+            temp_paths = [
+                "/sys/class/thermal/thermal_zone0/temp",
+                "/sys/class/hwmon/hwmon0/temp1_input",
+                "/sys/class/hwmon/hwmon1/temp1_input",
+            ]
+            for tp in temp_paths:
+                try:
+                    with open(tp) as f:
+                        raw = f.read().strip()
+                    temp_c = int(raw) / 1000 if len(raw) > 3 else int(raw)
+                    result_parts.append(f"CPU Temperature: {temp_c}°C")
+                    break
+                except (FileNotFoundError, PermissionError, ValueError):
+                    continue
+
+        # ── Disk Usage ──
+        if want_all or "disk" in requested:
+            try:
+                stat = os.statvfs("/")
+                total_bytes = stat.f_frsize * stat.f_blocks
+                free_bytes = stat.f_frsize * stat.f_bfree
+                used_bytes = total_bytes - free_bytes
+                total_gb = total_bytes / (1024**3)
+                used_gb = used_bytes / (1024**3)
+                pct = 100.0 * used_bytes / total_bytes if total_bytes > 0 else 0
+                result_parts.append(f"Disk (/): {used_gb:.1f}GB / {total_gb:.1f}GB ({pct:.1f}%)")
+            except Exception as exc:
+                result_parts.append(f"Disk: error ({exc})")
+
+        # ── Uptime ──
+        if want_all or "uptime" in requested:
+            try:
+                with open("/proc/uptime") as f:
+                    uptime_sec = float(f.read().split()[0])
+                days = int(uptime_sec // 86400)
+                hours = int((uptime_sec % 86400) // 3600)
+                minutes = int((uptime_sec % 3600) // 60)
+                result_parts.append(f"Uptime: {days}d {hours}h {minutes}m")
+            except Exception as exc:
+                result_parts.append(f"Uptime: error ({exc})")
+
+        output = "\n".join(result_parts) if result_parts else "No metrics available"
+        return ToolResult(
+            tool_name="system_monitor",
+            success=True,
+            output=output,
+            metadata={"metrics_requested": requested},
+        )
+
+    # ========================================================================
+    # Voice Input (whisper.cpp integration)
+    # ========================================================================
+
+    def _voice_input(self, args: Dict[str, Any]) -> ToolResult:
+        """Record audio and transcribe using whisper.cpp or system STT.
+
+        Pattern from Jarvis: whisper.cpp integration via CMake FetchContent
+        """
+        duration = min(args.get("duration", 5), 30)
+        language = args.get("language", "en")
+
+        # Try whisper.cpp first
+        whisper_binary = shutil.which("whisper-cli") or shutil.which("whisper")
+        if whisper_binary:
+            try:
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                    wav_path = tmp.name
+
+                # Record audio with arecord (ALSA) or parec (PulseAudio)
+                record_cmd = []
+                if shutil.which("parec"):
+                    record_cmd = ["parec", "--format=s16le", "--rate=16000",
+                                  f"--record-duration={duration}", wav_path]
+                elif shutil.which("arecord"):
+                    record_cmd = ["arecord", "-f", "S16_LE", "-r", "16000",
+                                  "-d", str(duration), wav_path]
+                else:
+                    return ToolResult(
+                        tool_name="voice_input",
+                        success=False,
+                        error="No recording tool found. Install parec (pulseaudio-utils) or arecord (alsa-utils)",
+                    )
+
+                subprocess.run(record_cmd, capture_output=True, text=True, timeout=duration + 5)
+
+                # Transcribe with whisper
+                whisper_result = subprocess.run(
+                    [whisper_binary, "-f", wav_path, "-l", language, "--no-prints"],
+                    capture_output=True, text=True, timeout=60,
+                )
+
+                os.unlink(wav_path)
+
+                text = whisper_result.stdout.strip() or "(no speech detected)"
+                return ToolResult(
+                    tool_name="voice_input",
+                    success=True,
+                    output=text,
+                    metadata={"duration": duration, "language": language, "engine": "whisper"},
+                )
+
+            except subprocess.TimeoutExpired:
+                return ToolResult(
+                    tool_name="voice_input",
+                    success=False,
+                    error="Voice recording/transcription timed out",
+                )
+            except Exception as exc:
+                return ToolResult(
+                    tool_name="voice_input",
+                    success=False,
+                    error=f"Voice input failed: {exc}",
+                )
+
+        # Fallback: check if any STT is available
+        return ToolResult(
+            tool_name="voice_input",
+            success=True,
+            output=f"Voice input requires whisper.cpp. Install with:\n"
+                   f"  pip install whisper-cpp\n"
+                   f"  or build from source: https://github.com/ggerganov/whisper.cpp\n"
+                   f"Requested: {duration}s recording in {language}",
+            metadata={"available": False, "duration": duration, "language": language},
+        )
+
+    # ========================================================================
+    # TTS Output (text-to-speech)
+    # ========================================================================
+
+    def _tts_output(self, args: Dict[str, Any]) -> ToolResult:
+        """Convert text to speech and play through system speakers.
+
+        Tries: espeak-ng → festival → speech-dispatcher → spd-say
+        """
+        text = args.get("text", "")
+        voice = args.get("voice", "en")
+        speed = min(max(args.get("speed", 150), 80), 450)
+
+        if not text:
+            return ToolResult(
+                tool_name="tts_output",
+                success=False,
+                error="Text is required for TTS",
+            )
+
+        # Truncate very long text
+        if len(text) > 2000:
+            text = text[:2000] + "..."
+
+        # Try espeak-ng (most common on Arch)
+        espeak = shutil.which("espeak-ng") or shutil.which("espeak")
+        if espeak:
+            try:
+                subprocess.run(
+                    [espeak, "-v", voice, "-s", str(speed), text],
+                    capture_output=True, text=True, timeout=30,
+                )
+                return ToolResult(
+                    tool_name="tts_output",
+                    success=True,
+                    output=f"Spoken: {text[:100]}...",
+                    metadata={"engine": "espeak", "voice": voice, "speed": speed, "length": len(text)},
+                )
+            except Exception as exc:
+                return ToolResult(
+                    tool_name="tts_output",
+                    success=False,
+                    error=f"TTS failed: {exc}",
+                )
+
+        # Try spd-say (speech-dispatcher)
+        spd_say = shutil.which("spd-say")
+        if spd_say:
+            try:
+                subprocess.run(
+                    [spd_say, "-l", voice, "-r", str(speed), text],
+                    capture_output=True, text=True, timeout=30,
+                )
+                return ToolResult(
+                    tool_name="tts_output",
+                    success=True,
+                    output=f"Spoken: {text[:100]}...",
+                    metadata={"engine": "speech-dispatcher", "voice": voice, "speed": speed},
+                )
+            except Exception as exc:
+                return ToolResult(
+                    tool_name="tts_output",
+                    success=False,
+                    error=f"TTS failed: {exc}",
+                )
+
+        # No TTS engine found
+        return ToolResult(
+            tool_name="tts_output",
+            success=True,
+            output=f"TTS output requires espeak-ng or speech-dispatcher.\n"
+                   f"Install with: sudo pacman -S espeak-ng\n"
+                   f"Requested: '{text[:100]}...' in {voice} at {speed} wpm",
+            metadata={"available": False, "text_length": len(text)},
+        )
