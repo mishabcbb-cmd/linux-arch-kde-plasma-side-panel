@@ -31,11 +31,15 @@ tokio = { version = "1", features = ["full"] }
 log = "0.4"
 env_logger = "0.11"
 
-# Time
-chrono = { version = "0.4", features = ["serde"] }
+# Filesystem paths
+dirs = "5"
 
-# UUID
-uuid = { version = "1", features = ["v4"] }
+# D-Bus
+zbus = { version = "5", features = ["tokio"] }
+
+# Wayland (native LayerShell, no GTK dependency)
+wayland-client = "0.31"
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

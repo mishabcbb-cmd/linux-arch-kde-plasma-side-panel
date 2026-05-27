@@ -1,0 +1,2 @@
+std::pin::Pin<std::boxed::Box<impl futures_util::Future<Output = Result<TaskCompleteStream, zbus::Error>>>>
+std::pin::Pin<std::boxed::Box<dyn futures_util::Future<Output = Result<SignalStream<'_>, zbus::Error>> + std::marker::Send>>
