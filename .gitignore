@@ -29,3 +29,14 @@ Thumbs.db
 
 # Local MCP cache
 .codebase-memory/
+
+# Специфичный мусор экосистемы и AI-логов
+build/
+.pytest_cache/
+.codebase-memory/
+.roo/
+.lean-ctx/
+.bash_history
+.bashrc.lean-ctx.bak
+**/node_modules/
+**/.pytest_cache/
