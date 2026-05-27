@@ -34,16 +34,5 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
-  },
-  "linux": {
-    "deb": {
-      "section": "utility",
-      "copyright": "MIT",
-      "changelog": "Unreleased",
-      "debinit": false,
-      "appimage": {
-        "bundleMediaFramework": true
-      }
-    }
   }
 }
