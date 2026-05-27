@@ -1,0 +1,9 @@
+/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/src-tauri/target/debug/deps/unicode_segmentation-106aae3ede6aca33.d: /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/lib.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/grapheme.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/sentence.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/word.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/tables.rs
+
+/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/src-tauri/target/debug/deps/libunicode_segmentation-106aae3ede6aca33.rmeta: /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/lib.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/grapheme.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/sentence.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/word.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/tables.rs
+
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/lib.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/grapheme.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/sentence.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/word.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-segmentation-1.13.2/src/tables.rs:

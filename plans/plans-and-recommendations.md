@@ -748,3 +748,162 @@ void AppGridPlugin::configureWayland(QWindow *window) {
 *Автор: 🏗️ Lead Architect*
 *Контекст: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · NVIDIA Wayland · llama.cpp Qwen3.6-35B*
 *Инструменты: SearXNG research · codebase-memory · lean-ctx · engram · AppGrid source analysis*
+
+## 16. Исследование: Frontend Dependencies Architecture
+
+### 16.1 React 19 + Vite 6 + TypeScript Stack
+
+#### React 19 (Production: ^19.0.0)
+- **Server Components** — нативно интегрированы, не нужен Next.js
+- **Actions API** — упрощает формы и мутации данных (replace useEffect + setState)
+- **Automatic Batching** — улучшена concurrent rendering
+- **useActionState / useOptimistic** — встроенная поддержка optimistic updates
+- **useOptimistic hook** — упрощает optimistic UI updates для async операций
+- **Relevance для проекта**: React 19 идеально подходит для AI Agent UI — Actions API упрощает интеграцию с Tauri IPC, Server Components позволяют offload LLM queries на бэкенд
+
+#### Vite 6 (Build: ^6.0.0)
+- **Faster HMR** — критично для QML/React bridge development
+- **ESM-first** — лучше совместимость с Tauri webview
+- **Plugin system** — @vitejs/plugin-react для JSX/TSX support
+- **Relevance**: Vite 6 обеспечивает быструю разработку с мгновенным hot-reload
+
+#### TypeScript (Type: ^5.6.0)
+- **Essential** для QML interop type safety
+- **Strict mode** — предотвращает runtime errors при IPC calls
+- **Relevance**: TypeScript обеспечивает type safety между React frontend ↔ Rust backend ↔ QML
+
+#### Tailwind CSS (Build: ^3.4.0)
+- **Utility-first** — идеально для быстрой итерации UI компонентов
+- **PostCSS + Autoprefixer** — vendor prefixing для Wayland compatibility
+- **Relevance**: Tailwind ускоряет разработку QML-подобных компонентов в React
+
+### 16.2 Zustand State Management (Production: ^5.0.0)
+
+#### Преимущества для проекта
+- **Minimal API** — нет boilerplate, в отличие от Redux
+- **Hook-based** — natural integration с React 19
+- **Pull-based model** — selectors для efficient re-rendering
+- **No Context Provider** — не нужно оборачивать приложение
+
+#### Zustand vs QtQuick Property Binding
+| Аспект | QtQuick Binding | Zustand |
+|--------|----------------|---------|
+| Reactivity | Automatic (declarative) | Explicit (selectors) |
+| Cross-process | Нет (QML only) | Да (через IPC) |
+| Testability | Low | High |
+| Boilerplate | Low | Minimal |
+| **Relevance** | Native для QML | Bridge между React ↔ QML |
+
+**Ключевая инсайт**: Zustand store может служить единым источником истины между React frontend и QML через Tauri IPC — Zustand selectors map к QML properties.
+
+### 16.3 Lucide React Icons (Production: ^0.383.0)
+
+#### Почему Lucide, а не FontAwesome
+| Аспект | Lucide | FontAwesome |
+|--------|---------|-------------|
+| Format | SVG (inline) | Font file |
+| Tree-shakeable | ✅ Да | ❌ Нет |
+| Bundle impact | Only imported icons | All icons loaded |
+| Customization | Props (size, color, stroke) | CSS overrides |
+| License | MIT | CC BY 4.0 |
+| Icons count | 1600+ | 20000+ |
+
+**Relevance для проекта**: Tree-shakeable SVG icons — только импортированные иконки попадают в bundle. Идеально для Plasma sidebar где важен размер и производительность.
+
+### 16.4 Tauri 2.0 Plugins Analysis
+
+#### @tauri-apps/api (Production: ^2)
+- **Webview-based** — использует системный WebView (не Chromium)
+- **IPC bridge** — между Rust backend и JS frontend
+- **Relevance**: Основной транспорт для React ↔ Rust communication
+
+#### tauri-plugin-autostart (Production: ^2)
+- **Linux support** — работает через XDG Autostart
+- **Flatpak caveat** — issue #3166: Exec path issue в Flatpak
+- **Relevance**: Для автозапуска AI Agent при логине в KDE
+
+#### tauri-plugin-global-shortcut (Production: ^2)
+- **Rust 1.77.2+ required** — наш GCC 16.1.1 совместим
+- **Wayland support** — работает, но требует Accessibility permissions
+- **Default shortcut** — ctrl+shift+space (конфликт с KDE?)
+- **Relevance**: Global hotkey для вызова AI Agent panel из любого приложения
+
+#### tauri-plugin-shell (Production: ^2)
+- **Process spawning** — для LLM commands (llama.cpp)
+- **File/URL management** — через default applications
+- **Relevance**: Запуск `llama-server` и управление процессами
+
+#### tauri-plugin-store (Production: ^2)
+- **JSON persistence** — для configuration
+- **Limitations**: Не подходит для complex state (embedding vectors)
+- **Relevance**: Хранение API keys, settings, preferences
+
+### 16.5 Hybrid Architecture: React/Tauri + QML/Plasma
+
+#### Наша архитектура
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    KDE Plasma 6                              │
+│  ┌─────────────┐  ┌─────────────────────────────────────┐  │
+│  │  QML/Plasma │  │       Tauri WebView (React)          │  │
+│  │  Side Panel │  │                                      │  │
+│  │             │  │  ┌───────────────────────────────┐   │  │
+│  │  • System   │  │  │  React 19 + TypeScript         │   │  │
+│  │  • Tray     │  │  │  Zustand State                 │   │  │
+│  │  • Native   │  │  │  Lucide Icons                  │   │  │
+│  │  • Wayland  │  │  │  Tailwind CSS                  │   │  │
+│  │  • Kirigami │  │  └───────────┬───────────────────┘   │  │
+│  │             │  │              │ IPC (Tauri)           │  │
+│  └──────┬──────┘  │              │                       │  │
+│         │          │  ┌───────────▼───────────────────┐   │  │
+│         │          │  │  Rust Backend (Tauri)          │   │  │
+│         │          │  │  • llama.cpp (LLM inference)   │   │  │
+│         │          │  │  • Embeddings (RAG)            │   │  │
+│         │          │  │  • MCP Server/Client           │   │  │
+│         │          │  │  • Plugin System               │   │  │
+│         │          │  └───────────────────────────────┘   │  │
+│         │          └─────────────────────────────────────┘  │
+└─────────┴───────────────────────────────────────────────────┘
+```
+
+#### Почему Hybrid, а не Pure QML или Pure React
+| Архитектура | Плюсы | Минусы |
+|-------------|-------|--------|
+| **Pure QML** | Native Plasma, best Wayland perf | Limited AI ecosystem, no React components |
+| **Pure React/Tauri** | Rich ecosystem, TypeScript | No native Plasma integration |
+| **Hybrid (наш выбор)** | Best of both worlds | More complexity, IPC overhead |
+
+**Решение**: Hybrid архитектура — QML для native sidebar integration, React для AI agent UI complexity.
+
+### 16.6 Wayland-specific Concerns
+
+#### NVIDIA Wayland Risks
+| Риск | Severity | Mitigation |
+|------|----------|------------|
+| GBM EGL display crash | High | Tauri webview isolation |
+| GPU memory contention | Medium | Configurable GPU limits |
+| Screen recording | Medium | xdg-desktop-portal integration |
+
+#### Tauri on Wayland
+- Tauri 2.0 использует системный WebView (WebKitGTK на Linux)
+- WebKitGTK на Wayland работает стабильнее чем Chromium
+- **Recommendation**: Использовать `WEBKIT_DISABLE_DMABUF_RENDERER=1` для NVIDIA GPUs
+
+### 16.7 Dependencies Summary
+
+#### Production Dependencies — Оценка
+| Dependency | Fit for Project | Risk |
+|------------|----------------|------|
+| React 19 | ✅ Отлично — идеален для AI UI | Low |
+| Zustand | ✅ Хорошо — minimal overhead | Low |
+| Lucide React | ✅ Отлично — tree-shakeable | Low |
+| Tauri 2 | ✅ Хорошо — native Rust backend | Medium (Wayland) |
+| Tailwind CSS | ✅ Хорошо — rapid UI dev | Low |
+| Vite 6 | ✅ Отлично — fast HMR | Low |
+
+#### Development Dependencies — Оценка
+| Dependency | Fit for Project | Risk |
+|------------|----------------|------|
+| TypeScript | ✅ Essential | Low |
+| PostCSS/Autoprefixer | ✅ Needed for vendor prefixes | Low |
+| Tauri CLI | ✅ Required for build | Low |

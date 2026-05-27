@@ -1,0 +1,13 @@
+/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/src-tauri/target/debug/deps/jsonptr-a600e6f5001fbf31.d: /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/lib.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/assign.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/delete.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/resolve.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/pointer.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/token.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/index.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/component.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/../README.md
+
+/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/src-tauri/target/debug/deps/libjsonptr-a600e6f5001fbf31.rmeta: /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/lib.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/assign.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/delete.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/resolve.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/pointer.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/token.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/index.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/component.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/../README.md
+
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/lib.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/assign.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/delete.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/resolve.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/pointer.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/token.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/index.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/component.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/jsonptr-0.6.3/src/../README.md:

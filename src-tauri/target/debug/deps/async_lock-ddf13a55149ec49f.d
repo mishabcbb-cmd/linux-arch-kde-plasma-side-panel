@@ -1,0 +1,12 @@
+/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/src-tauri/target/debug/deps/async_lock-ddf13a55149ec49f.d: /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/lib.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/barrier.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/mutex.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/once_cell.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock/futures.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock/raw.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/semaphore.rs
+
+/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/src-tauri/target/debug/deps/libasync_lock-ddf13a55149ec49f.rmeta: /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/lib.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/barrier.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/mutex.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/once_cell.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock/futures.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock/raw.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/semaphore.rs
+
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/lib.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/barrier.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/mutex.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/once_cell.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock/futures.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/rwlock/raw.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-lock-3.4.2/src/semaphore.rs:

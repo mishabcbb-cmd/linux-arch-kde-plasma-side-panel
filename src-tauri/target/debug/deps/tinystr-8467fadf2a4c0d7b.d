@@ -1,0 +1,12 @@
+/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/src-tauri/target/debug/deps/tinystr-8467fadf2a4c0d7b.d: /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/lib.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/macros.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/ascii.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/asciibyte.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/error.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/int_ops.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/unvalidated.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/ule.rs
+
+/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/src-tauri/target/debug/deps/libtinystr-8467fadf2a4c0d7b.rmeta: /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/lib.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/macros.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/ascii.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/asciibyte.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/error.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/int_ops.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/unvalidated.rs /home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/ule.rs
+
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/lib.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/macros.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/ascii.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/asciibyte.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/error.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/int_ops.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/unvalidated.rs:
+/home/neo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tinystr-0.8.3/src/ule.rs:
