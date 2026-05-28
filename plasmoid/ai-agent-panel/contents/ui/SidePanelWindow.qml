@@ -29,7 +29,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as Plasma5Support
-import org.kde.layershell
+import org.kde.layershell 1.0 as LayerShell
 
 Window {
     id: root
@@ -449,15 +449,47 @@ Window {
             }
         }
 
-        // ── Chat messages ──
-        ChatView {
-            id: chatView
+        // ── Tab bar: Agent | A2A Hub ──
+        TabBar {
+            id: tabBar
+            Layout.fillWidth: true
+            visible: false  // Hidden by default, shown when A2A Hub is available
+
+            TabButton {
+                text: "Agent"
+                icon.name: "user-identity"
+            }
+            TabButton {
+                text: "A2A Hub"
+                icon.name: "view-conversation"
+            }
+        }
+
+        // ── Content area ──
+        StackLayout {
+            id: contentStack
             Layout.fillWidth: true
             Layout.fillHeight: true
-            messages: chatMessages
+            currentIndex: tabBar.currentIndex
 
-            onProvideUserResponse: function(response) {
-                root.provideUserResponse(response)
+            // ── Tab 0: Agent Chat ──
+            ChatView {
+                id: chatView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                messages: chatMessages
+
+                onProvideUserResponse: function(response) {
+                    root.provideUserResponse(response)
+                }
+            }
+
+            // ── Tab 1: A2A Hub Conversations ──
+            A2AChatView {
+                id: a2aChatView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                hubUrl: "http://127.0.0.1:9000"
             }
         }
 

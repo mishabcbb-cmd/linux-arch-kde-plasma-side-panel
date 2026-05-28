@@ -1,10 +1,74 @@
 # KDE AI Agent Panel — Project State
 
-**Version**: 3.2.0
-**Date**: 2026-05-26
-**Arch**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1
-**Phase**: 3 — Plasma Integration & Hardening (Complete)
-**Next**: Phase 4 — Enterprise & Performance (Planning)
+**Version**: 4.1.0
+**Date**: 2026-05-27
+**Arch**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · Rust 1.95.0
+**Phase**: 4 — Tauri 2 Integration & Hybrid UI (In Progress)
+**Previous**: Phase 3 — Plasma Integration & Hardening (Complete)
+
+## A2A Hub — Multi-Agent Orchestration Layer
+
+**Version**: 1.0.0
+**Status**: ✅ Active — Hub + 3 agents running
+**Directory**: `a2a_hub/`
+
+### Architecture
+```
+VS Code (Roo/Kade/Zoo/Kilo) → MCP → A2A Hub (:9000) → Agents
+                                                   ├── owl-coder (:8091) — OpenRouter/owl-alpha
+                                                   ├── owl-researcher (:8092) — OpenRouter/owl-alpha
+                                                   └── qwen-reviewer (:8093) — llama.cpp/Qwen3.6-35B
+```
+
+### Hub HTTP API
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Hub info (agents, uptime, endpoints) |
+| `/health` | GET | Health check |
+| `/agents` | GET | List all agents |
+| `/agents/active` | GET | List active agents |
+| `/agents/{name}` | GET | Get agent info |
+| `/agents/register` | POST | Register agent |
+| `/agents/heartbeat` | POST | Agent heartbeat |
+| `/tasks/submit` | POST | Submit task (auto-routing) |
+| `/tasks/delegate` | POST | Delegate to specific agent |
+| `/tasks` | GET | List all tasks |
+| `/tasks/{id}` | GET | Get task status |
+| `/context` | GET | Get all shared context |
+| `/conversations` | GET | List all conversations |
+| `/conversations/{task_id}` | GET | Get conversation log |
+| `/conversations/message` | POST | Add message to conversation |
+| `/context/stats` | GET | Storage statistics |
+
+### MCP Server
+- **Command**: `python -m a2a_hub.mcp_server --transport stdio`
+- **Tools**: `list_agents`, `delegate_task`, `get_agent_card`, `get_shared_context`, `remember`, `recall`, `get_task_history`
+- **Configs updated**: VS Code, Roo Cline, Kade, Zoo Code, Kilo
+
+### Conversation Log
+- Full message history per task with timestamps
+- User and agent messages with metadata (model, agent name)
+- Accessible via `GET /conversations/{task_id}`
+
+### Key Files
+- `a2a_hub/server/hub_server.py` — HTTP server + orchestrator
+- `a2a_hub/registry/agent_registry.py` — Agent registry + heartbeat
+- `a2a_hub/context/context_store.py` — Shared context + conversation log
+- `a2a_hub/client/hub_client.py` — Python SDK for agents
+- `a2a_hub/llm_agent/agent_server.py` — A2A Server wrapper for LLM providers
+- `a2a_hub/mcp_server/server.py` — MCP Server (7 tools)
+- `a2a_hub/orchestrator.py` — Multi-agent orchestrator
+- `a2a_hub/config/agents.yaml` — Agent configuration
+
+### API Keys
+- `OPENROUTER_API_KEY_1` — owl-coder
+- `OPENROUTER_API_KEY_2` — owl-researcher
+- llama.cpp — local, no key needed
+
+### Next Steps
+1. Integrate chat with KDE Plasma Side Panel (D-Bus)
+2. User-to-agent chat through Hub
+3. systemd auto-start for Hub + agents
 
 ---
 
@@ -12,48 +76,50 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  KDE Plasma Panel (QML) / Web UI (FastAPI + HTMX)                            │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐                        │
-│  │ ChatView │ │TaskInput │ │FileTree  │ │ StatusBar │                        │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └─────┬─────┘                        │
-│       │            │            │              │                              │
-│       └────────────┴────────────┴──────────────┘                              │
-│                        │ D-Bus / subprocess                                   │
-├────────────────────────┼──────────────────────────────────────────────────────┤
-│                        ▼                                                      │
-│  Python Agent Backend (systemd user service)                                  │
-│  ┌────────────────────────────────────────────────────────────────────────┐   │
-│  │  AgentLoop (ReAct)                                                     │   │
-│  │  ┌──────────┐ ┌────────────┐ ┌──────────┐ ┌──────────────┐            │   │
-│  │  │ LLM      │ │ Tool       │ │ MCP      │ │ Context      │            │   │
-│  │  │ Client   │ │ Registry   │ │ Client   │ │ Manager      │            │   │
-│  │  │ 4 prov.  │ │ 12 tools   │ │ dynamic  │ │ token budget │            │   │
-│  │  └──────────┘ └────────────┘ └──────────┘ └──────────────┘            │   │
-│  │                        │                                                │   │
-│  │  ┌────────────────────────────────────────────────────────────────┐    │   │
-│  │  │  RAG Engine (ChromaDB)                                         │    │   │
-│  │  │  codebase · memory · docs — Ollama embeddings + fallback       │    │   │
-│  │  └────────────────────────────────────────────────────────────────┘    │   │
-│  └────────────────────────────────────────────────────────────────────────┘   │
-│                        │                                                      │
-│  ┌────────────────────────────────────────────────────────────────────────┐   │
-│  │  C++ Native Layer (GCC 16.1.1 · pybind11)                             │   │
-│  │  cosine_similarity · normalize · batch_normalize · similarity_matrix   │   │
-│  │  count_tokens · chunk_text                                             │   │
-│  │  LTO thin · PGO · march=native · TurboQuant+ (optional)               │   │
-│  └────────────────────────────────────────────────────────────────────────┘   │
-│                        │                                                      │
-│  ┌────────────────────────────────────────────────────────────────────────┐   │
-│  │  Side Panel Window (QML Window · LayerShellQt-ready)                   │   │
-│  │  Frameless · Slide-in/out animation · D-Bus listener subprocess        │   │
-│  │  Auto-show: top-left corner hover · Toggle: Meta+A (Plasma shortcut)   │   │
-│  │  Streaming tokens · All 7 D-Bus signals · ChatView + TaskInput         │   │
-│  └────────────────────────────────────────────────────────────────────────┘   │
-│                        │                                                      │
-│  ┌────────────────────────────────────────────────────────────────────────┐   │
-│  │  External MCP Servers                                                  │   │
-│  │  lean-ctx · engram · codebase-memory · searxng                         │   │
-│  └────────────────────────────────────────────────────────────────────────┘   │
+│  HYBRID UI — QML Plasmoid (Plasma) + Tauri WebView (React)                  │
+│                                                                              │
+│  ┌─────────────────────────┐    ┌──────────────────────────────────────┐     │
+│  │  QML SidePanelWindow    │    │  Tauri 2 WebView (React + TS)        │     │
+│  │  ┌──────────┐           │    │  ┌──────────┐ ┌──────────┐          │     │
+│  │  │ ChatView │           │    │  │ ChatView │ │TaskInput │          │     │
+│  │  │TaskInput │           │    │  │ FileTree │ │StatusBar │          │     │
+│  │  │ FileTree │           │    │  └────┬─────┘ └────┬─────┘          │     │
+│  │  │StatusBar │           │    │       │            │                │     │
+│  │  └────┬─────┘           │    │       └────────────┘                │     │
+│  │       │ D-Bus           │    │            │ invoke("command")      │     │
+│  └───────┼─────────────────┘    └────────────┼───────────────────────┘     │
+│          │                                   │                              │
+├──────────┼───────────────────────────────────┼──────────────────────────────┤
+│          ▼                                   ▼                              │
+│  Python Agent Backend (systemd)          Tauri Rust Backend                 │
+│  ┌─────────────────────────┐    ┌──────────────────────────────────────┐     │
+│  │  AgentLoop (ReAct)      │    │  src-tauri/                          │     │
+│  │  ┌──────────┐           │    │  ├── lib.rs (Builder + plugins)      │     │
+│  │  │ LLM      │           │    │  ├── commands.rs (D-Bus bridge)      │     │
+│  │  │ Client   │           │    │  ├── dbus_listener.rs (subprocess)   │     │
+│  │  │ 5 prov.  │           │    │  └── layer_shell.rs (Wayland)        │     │
+│  │  └──────────┘           │    │                                      │     │
+│  │  ┌──────────┐           │    │  Plugins: store, autostart,          │     │
+│  │  │ Tool     │           │    │  global-shortcut, shell,             │     │
+│  │  │ Registry │           │    │  single-instance                     │     │
+│  │  │ 12 tools │           │    │                                      │     │
+│  │  └──────────┘           │    │  LayerShell: wayland-client          │     │
+│  │  ┌──────────┐           │    │  (native, no GTK)                    │     │
+│  │  │ MCP      │           │    └──────────────────────────────────────┘     │
+│  │  │ Client   │           │                                                 │
+│  │  └──────────┘           │                                                 │
+│  │  ┌──────────┐           │                                                 │
+│  │  │ RAG      │           │                                                 │
+│  │  │ ChromaDB │           │                                                 │
+│  │  └──────────┘           │                                                 │
+│  └─────────────────────────┘                                                 │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐    │
+│  │  C++ Native Layer (GCC 16.1.1 · pybind11)                           │    │
+│  │  cosine_similarity · normalize · batch_normalize · similarity_matrix │    │
+│  │  count_tokens · chunk_text                                           │    │
+│  │  LTO thin · PGO · march=native                                      │    │
+│  └──────────────────────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -65,16 +131,16 @@
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| [`agent/main.py`](agent/main.py) | 470 | D-Bus service entry point, TogglePanel method |
+| [`agent/main.py`](agent/main.py) | 467 | D-Bus service entry point, TogglePanel method |
 | [`agent/agent_loop.py`](agent/agent_loop.py) | 672 | ReAct loop with MCP + RAG integration |
 | [`agent/tools.py`](agent/tools.py) | 1416 | 12 tools |
-| [`agent/llm_client.py`](agent/llm_client.py) | 779 | 4 providers (Anthropic, Ollama, OpenAI, llama.cpp) |
+| [`agent/llm_client.py`](agent/llm_client.py) | 779 | 5 providers (Anthropic, Ollama, OpenAI, OpenRouter, llama.cpp) |
 | [`agent/context_manager.py`](agent/context_manager.py) | 285 | Token budget management |
 | [`agent/rag.py`](agent/rag.py) | 551 | RAG engine: ChromaDB |
 | [`agent/mcp_server.py`](agent/mcp_server.py) | 394 | MCP server |
 | [`agent/mcp_client.py`](agent/mcp_client.py) | 343 | MCP client |
 | [`agent/dbus_helper.py`](agent/dbus_helper.py) | 93 | CLI bridge QML → D-Bus, toggle_panel command |
-| [`agent/dbus_listener.py`](agent/dbus_listener.py) | 120 | **NEW** D-Bus signal listener for QML (subprocess) |
+| [`agent/dbus_listener.py`](agent/dbus_listener.py) | 120 | D-Bus signal listener for QML (subprocess) |
 | [`agent/__init__.py`](agent/__init__.py) | 31 | Package exports |
 | [`agent/requirements.txt`](agent/requirements.txt) | 28 | Dependencies |
 
@@ -83,17 +149,45 @@
 | File | Lines | Purpose |
 |------|-------|---------|
 | [`metadata.json`](plasmoid/ai-agent-panel/metadata.json) | 27 | Plasma 6 package metadata |
-| [`contents/ui/main.qml`](plasmoid/ai-agent-panel/contents/ui/main.qml) | 120 | **REWRITTEN** AppGrid pattern: PlasmoidItem + Window lifecycle |
-| [`contents/ui/SidePanelWindow.qml`](plasmoid/ai-agent-panel/contents/ui/SidePanelWindow.qml) | 588 | **NEW** Frameless side panel window (LayerShellQt-ready) |
-| [`contents/ui/ChatView.qml`](plasmoid/ai-agent-panel/contents/ui/ChatView.qml) | 163 | Streaming chat log (updated for array model) |
+| [`contents/ui/main.qml`](plasmoid/ai-agent-panel/contents/ui/main.qml) | 120 | AppGrid pattern: PlasmoidItem + Window lifecycle |
+| [`contents/ui/SidePanelWindow.qml`](plasmoid/ai-agent-panel/contents/ui/SidePanelWindow.qml) | 548 | Frameless side panel window (LayerShellQt) |
+| [`contents/ui/ChatView.qml`](plasmoid/ai-agent-panel/contents/ui/ChatView.qml) | 163 | Streaming chat log |
 | [`contents/ui/TaskInput.qml`](plasmoid/ai-agent-panel/contents/ui/TaskInput.qml) | 143 | Multi-line input |
-| [`contents/ui/FileTree.qml`](plasmoid/ai-agent-panel/contents/ui/FileTree.qml) | 370 | File browser (ScrollArea → ScrollView fix) |
+| [`contents/ui/FileTree.qml`](plasmoid/ai-agent-panel/contents/ui/FileTree.qml) | 370 | File browser |
 | [`contents/ui/StatusBar.qml`](plasmoid/ai-agent-panel/contents/ui/StatusBar.qml) | 146 | Status indicator |
 | [`contents/ui/dbus_helper.py`](plasmoid/ai-agent-panel/contents/ui/dbus_helper.py) | 93 | Copy for plasmoid packaging |
-| [`contents/ui/dbus_listener.py`](plasmoid/ai-agent-panel/contents/ui/dbus_listener.py) | 120 | **NEW** Copy for plasmoid packaging |
+| [`contents/ui/dbus_listener.py`](plasmoid/ai-agent-panel/contents/ui/dbus_listener.py) | 120 | Copy for plasmoid packaging |
 | [`contents/config/main.xml`](plasmoid/ai-agent-panel/contents/config/main.xml) | 68 | KConfig XSD schema |
 
-### 2.3 C++ Native Build
+### 2.3 Tauri 2 — Rust Backend (`src-tauri/`)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| [`Cargo.toml`](src-tauri/Cargo.toml) | 46 | Rust deps: tauri 2, plugins, wayland-client |
+| [`build.rs`](src-tauri/build.rs) | — | Tauri build script |
+| [`tauri.conf.json`](src-tauri/tauri.conf.json) | — | Tauri configuration |
+| [`src/lib.rs`](src-tauri/src/lib.rs) | 67 | Tauri app entry, plugins, D-Bus listener spawn |
+| [`src/main.rs`](src-tauri/src/main.rs) | — | Rust entry point |
+| [`src/commands.rs`](src-tauri/src/commands.rs) | 255 | Tauri commands: run_task, stop_task, get_status, etc. |
+| [`src/dbus_listener.rs`](src-tauri/src/dbus_listener.rs) | 89 | Python subprocess → Tauri events bridge |
+| [`src/layer_shell.rs`](src-tauri/src/layer_shell.rs) | 218 | Native Wayland LayerShell (wayland-client, no GTK) |
+
+### 2.4 Tauri 2 — React Frontend (`src/`)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| [`package.json`](package.json) | — | React 19, Zustand, Tauri plugins |
+| [`vite.config.ts`](vite.config.ts) | — | Vite config (port 1420) |
+| [`tsconfig.json`](tsconfig.json) | — | TypeScript strict mode |
+| [`src/App.tsx`](src/App.tsx) | 373 | Main component: D-Bus signal handling, task execution |
+| [`src/types.ts`](src/types.ts) | 89 | Core types: AgentStatus, ChatMessage, FileEntry, AgentState |
+| [`src/store/agentStore.ts`](src/store/agentStore.ts) | 116 | Zustand store: connection, chat, file tree, context files |
+| [`src/components/ChatView.tsx`](src/components/ChatView.tsx) | 181 | Streaming chat log (color-coded, auto-scroll) |
+| [`src/components/TaskInput.tsx`](src/components/TaskInput.tsx) | 121 | Multi-line input, Ctrl+Enter, context file chips |
+| [`src/components/StatusBar.tsx`](src/components/StatusBar.tsx) | 172 | Status bar: connection, actions, file tree toggle |
+| [`src/components/FileTree.tsx`](src/components/FileTree.tsx) | 296 | File browser: navigation, filter, multi-select |
+
+### 2.5 C++ Native Build
 
 | File | Lines | Purpose |
 |------|-------|---------|
@@ -104,29 +198,34 @@
 | [`src/tokenizer.cpp`](src/tokenizer.cpp) | — | UTF-8 token counting |
 | [`src/rag_native.cpp`](src/rag_native.cpp) | 151 | pybind11 wrapper |
 
-### 2.4 Scripts
+### 2.6 Scripts & Config
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| [`scripts/llama-server-args.sh`](scripts/llama-server-args.sh) | 30 | **NEW** llama.cpp server launch args (Qwen3.6-35B) |
+| [`scripts/llama-server-args.sh`](scripts/llama-server-args.sh) | 30 | llama.cpp server launch args (Qwen3.6-35B) |
 | [`scripts/pgo-generate.sh`](scripts/pgo-generate.sh) | 87 | PGO generation |
 | [`scripts/pgo-use.sh`](scripts/pgo-use.sh) | 79 | PGO optimized build |
-
-### 2.5 Install & Config
-
-| File | Lines | Purpose |
-|------|-------|---------|
 | [`install.sh`](install.sh) | 207 | 8-step installer |
 | [`uninstall.sh`](uninstall.sh) | 54 | Clean removal |
 | [`README.md`](README.md) | 400+ | Professional documentation |
 | [`.gitignore`](.gitignore) | 32 | Patterns |
 
-### 2.6 Plans & Documentation
+### 2.7 Tests (`tests/`)
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| [`plans/plans-and-recommendations.md`](plans/plans-and-recommendations.md) | 650+ | Plans, research, recommendations |
-| [`PROJECT_STATE.md`](PROJECT_STATE.md) | — | This file |
+| File | Purpose |
+|------|---------|
+| [`conftest.py`](tests/conftest.py) | Pytest fixtures |
+| [`test_tools.py`](tests/test_tools.py) | 12 tool tests |
+| [`test_mcp_server.py`](tests/test_mcp_server.py) | MCP server tests |
+| [`test_mcp_client.py`](tests/test_mcp_client.py) | MCP client tests |
+| [`test_rag.py`](tests/test_rag.py) | RAG engine tests |
+
+### 2.8 Plans & Documentation
+
+| File | Purpose |
+|------|---------|
+| [`plans/plans-and-recommendations.md`](plans/plans-and-recommendations.md) | Plans, research, recommendations (910+ lines) |
+| [`PROJECT_STATE.md`](PROJECT_STATE.md) | This file |
 
 ---
 
@@ -135,218 +234,40 @@
 | Feature | Status | Details |
 |---------|--------|---------|
 | **ReAct Agent Loop** | ✅ | 50 max iterations |
-| **Streaming Output** | ✅ | Tokens → D-Bus → QML |
+| **Streaming Output** | ✅ | Tokens → D-Bus → QML + Tauri events → React |
 | **Multi-Provider** | ✅ | Anthropic, Ollama, OpenRouter, OpenAI, llama.cpp |
 | **12 Built-in Tools** | ✅ | bash_exec, file_read, file_write, search_codebase, repo_map, run_tests, ask_user, cross_repo_search, cross_repo_trace, system_monitor, voice_input, tts_output |
 | **MCP Server** | ✅ | stdio + SSE |
 | **MCP Client** | ✅ | Dynamic servers, auto-approve |
 | **RAG Engine** | ✅ | ChromaDB, 3 collections |
 | **C++ Native Layer** | ✅ | GCC 16, LTO, PGO |
-| **Side Panel Window** | ✅ | **NEW** QML Window (AppGrid pattern), 588 lines |
-| **D-Bus Listener** | ✅ | **NEW** dbus_listener.py subprocess for QML |
-| **Plasma Shortcut** | ✅ | **NEW** Meta+A via Plasmoid.activated |
-| **Auto-show on hover** | ✅ | **NEW** Top-left corner (xdotool polling) |
-| **Slide animation** | ✅ | **NEW** Behavior on x, 200ms OutCubic |
-| **Streaming tokens** | ✅ | **NEW** end4 pattern in SidePanelWindow |
-| **llama.cpp provider** | ✅ | **NEW** Qwen3.6-35B-A3B on port 8085 |
-| **FileTree ScrollArea fix** | ✅ | PlasmaExtras.ScrollArea → QQC2.ScrollView |
+| **QML Side Panel** | ✅ | QML Window (AppGrid pattern), 548 lines |
+| **D-Bus Integration** | ✅ | 7 signals, 5 methods |
+| **Plasma Shortcut** | ✅ | Meta+A via Plasmoid.activated |
+| **Auto-show on hover** | ✅ | Top-left corner (xdotool polling) |
+| **llama.cpp provider** | ✅ | Qwen3.6-35B-A3B on port 8085 |
 | **Cross-session Memory** | ✅ | memory_store/memory_recall |
 | **Auto Git Commits** | ✅ | On every file_write |
-| **D-Bus Integration** | ✅ | 7 signals, 5 methods |
 | **Web UI** | ✅ | FastAPI + HTMX |
 | **CI Pipeline** | ✅ | GitHub Actions |
 | **Docker** | ✅ | Headless mode |
+| **Tauri 2 Backend** | ✅ | Rust, 5 plugins, D-Bus bridge, LayerShell |
+| **React Frontend** | ✅ | React 19 + TypeScript + Zustand, 5 components |
+| **LayerShell (native)** | ✅ | wayland-client, no GTK dependency |
 
 ---
 
-## 4. Side Panel Architecture
+## 4. Tauri 2 Integration (Phase 4)
 
-### 4.1 Evolution of Approaches
+### 4.1 Architecture
 
-| Approach | Result | Cause |
-|----------|--------|-------|
-| PyQt6 QQuickWindow + QTimer | ❌ Crash | GLib re-entrancy on Wayland |
-| PyQt6 + QThread.pyqtSignal | ❌ Crash | sendPostedEvents re-entrancy |
-| PyQt6 + QMetaObject.invokeMethod | ❌ Crash | QueuedConnection still via GLib |
-| PyQt6 + Self-pipe trick | ⚠️ Unstable | SIGUSR1 toggle unreliable |
-| **QML Window (AppGrid pattern)** | ✅ **Stable** | Inside Plasma QML engine, no GLib issues |
+Tauri 2 provides a hybrid UI layer alongside the QML plasmoid:
+- **Rust backend** handles D-Bus communication via Python subprocesses
+- **React frontend** mirrors QML SidePanelWindow functionality
+- **LayerShell** via native wayland-client (replaces QML LayerShell.Window)
+- **5 Tauri plugins**: store, autostart, global-shortcut, shell, single-instance
 
-### 4.2 Key Components
-
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Window | QtQuick.Window | Frameless, stays-on-top, tool |
-| D-Bus signals | dbus_listener.py subprocess | Listen for StatusChanged, TokenStream, etc. |
-| D-Bus methods | dbus_helper.py subprocess | RunTask, StopTask, GetStatus |
-| Slide animation | Behavior on x | 200ms OutCubic |
-| Auto-show | Timer + xdotool | 50×50 zone top-left corner |
-| Streaming | end4 pattern | Append tokens to last message |
-
-### 4.3 Global Shortcut
-
-| Component | Technology | Status |
-|-----------|-----------|--------|
-| Plasma shortcut | Plasmoid.activated | ✅ Configured (Meta+A) |
-| Toggle logic | toggleWindow() | ✅ In main.qml |
-| Window lifecycle | createObject/destroy | ✅ AppGrid pattern |
-
----
-
-## 5. LLM Provider: llama.cpp
-
-### 5.1 Local Model
-
-| Parameter | Value |
-|-----------|-------|
-| Model | Qwen3.6-35B-A3B-IQ3_M.gguf |
-| Server | llama.cpp on port 8085 |
-| GPU | NVIDIA RTX 3070 (99 layers) |
-| Context | 368,640 tokens |
-| RAM cache | 49,152 MiB |
-| Quantization | IQ3_M (15.4 GB) |
-| Parameters | 34.6B (3.6B active) |
-
-### 5.2 Config
-
-```json
-{
-    "provider": "llama.cpp",
-    "model": "Qwen3.6-35B-A3B-IQ3_M.gguf",
-    "llama_host": "http://localhost:8085"
-}
-```
-
----
-
-## 6. Memory Index
-
-### 6.1 Codebase Memory
-
-| Project | Nodes | Edges |
-|---------|-------|-------|
-| `linux-arch-kde-plasma-side-panel` | **1683** | **2764** |
-| `opencode-main` | 2946 | 7821 |
-| `jarvis-main` | 490 | 627 |
-
-### 6.2 Lean-ctx
-
-| Metric | Value |
-|--------|-------|
-| Files indexed | 31 |
-| Symbols | 358 |
-| Edges | 35 |
-| Commits enriched | 20 |
-| Tests | 6 |
-| Knowledge entries | 3 |
-
----
-
-## 7. Known Issues
-
-| Issue | Severity | Status |
-|-------|----------|--------|
-| SidePanelWindow не протестирован | 🟡 Medium | 📅 Нужно проверить Meta+A |
-| Нет C++ плагина для LayerShellQt | 🟡 Medium | 📅 Как в AppGrid |
-| RAG требует Ollama или large download | 🟢 Low | sentence-transformers fallback |
-| Нет Hybrid Search (BM25 + векторный) | 🟡 Medium | 📅 Phase 4 |
-| Нет Agentic RAG | 🟡 Medium | 📅 Phase 4 |
-
----
-
-## 8. Phase 3 Completion Summary
-
-Phase 3 (Plasma Integration & Hardening) is fully complete:
-
-| Milestone | Tasks | Status |
-|-----------|-------|--------|
-| **M1 — Plasma Polish** | FileTree + Config Persistence | ✅ Done |
-| **M2 — Test Coverage** | Pytest suite (86 tests) + MCP Config UI | ✅ Done |
-| **M3 — Cross-repo AI** | Cross-repo search + trace tools | ✅ Done |
-| **M4 — Extended Features** | Voice, Monitoring, TTS | ✅ Done |
-| **M5 — Side Panel** | QML Window, D-Bus listener, llama.cpp | ✅ **NEW** |
-
----
-
-*Generated by KDE Plasma Specialist · Phase 3 complete + M5 · 2026-05-26*
-
----
-
-## 9. Tauri 2 Integration (Phase 4 — New)
-
-### 9.1 Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│  KDE Plasma Panel (QML) / Tauri WebView (React)                              │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐                        │
-│  │ ChatView │ │TaskInput │ │FileTree  │ │ StatusBar │                        │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └─────┬─────┘                        │
-│       │            │            │              │                              │
-│       └────────────┴────────────┴──────────────┘                              │
-│                        │ D-Bus / subprocess                                   │
-├────────────────────────┼──────────────────────────────────────────────────────┤
-│                        ▼                                                      │
-│  Tauri 2.0 (Rust Backend + React Frontend)                                   │
-│  ┌────────────────────────────────────────────────────────────────────────┐   │
-│  │  src-tauri/ (Rust)                                                     │   │
-│  │  ├── Cargo.toml (tauri 2, plugins, specta)                             │   │
-│  │  ├── src/lib.rs (tauri::Builder)                                        │   │
-│  │  ├── src/main.rs (entry point)                                          │   │
-│  │  ├── src/commands.rs (Tauri commands)                                   │   │
-│  │  └── build.rs (tauri-build)                                             │   │
-│  │                                                                        │   │
-│  │  Plugins: store, autostart, global-shortcut, shell, single-instance    │   │
-│  └────────────────────────────────────────────────────────────────────────┘   │
-│                        │                                                      │
-│  ┌────────────────────────────────────────────────────────────────────────┐   │
-│  │  src/ (React + TypeScript)                                             │   │
-│  │  ├── package.json (react 19, zustand, lucide-react, tauri plugins)    │   │
-│  │  ├── vite.config.ts (port 1420)                                        │   │
-│  │  └── tsconfig.json (strict mode)                                       │   │
-│  └────────────────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 9.2 Files Created
-
-| File | Purpose |
-|------|---------|
-| [`package.json`](package.json) | Frontend dependencies (React 19, Zustand, Tauri plugins) |
-| [`package-lock.json`](package-lock.json) | Lock file |
-| [`pnpm-lock.yaml`](pnpm-lock.yaml) | pnpm lock file |
-| [`tsconfig.json`](tsconfig.json) | TypeScript strict mode config |
-| [`tsconfig.node.json`](tsconfig.node.json) | Node/tsconfig reference |
-| [`vite.config.ts`](vite.config.ts) | Vite config (port 1420) |
-| [`src-tauri/Cargo.toml`](src-tauri/Cargo.toml) | Rust dependencies (tauri 2, plugins) |
-| [`src-tauri/build.rs`](src-tauri/build.rs) | Tauri build script |
-| [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json) | Tauri configuration |
-| [`src-tauri/src/lib.rs`](src-tauri/src/lib.rs) | Tauri app entry |
-| [`src-tauri/src/main.rs`](src-tauri/src/main.rs) | Rust entry point |
-| [`src-tauri/src/commands.rs`](src-tauri/src/commands.rs) | Tauri command handlers |
-| [`src-tauri/icons/icon.png`](src-tauri/icons/icon.png) | App icon (RGBA PNG) |
-
-### 9.3 Dependencies Status
-
-| Category | Package | Version | Status |
-|----------|---------|---------|--------|
-| **Rust** | rustc | 1.95.0 | ✅ Installed |
-| **Rust** | cargo | 1.95.0 | ✅ Installed |
-| **Rust** | tauri-cli | 2.10.1 | ✅ Installed (via cargo) |
-| **Node** | node | v20.20.2 | ✅ Installed |
-| **Node** | pnpm | 10.33.4 | ✅ Installed |
-| **Frontend** | react | ^19.0.0 | ✅ Installed |
-| **Frontend** | zustand | ^5.0.0 | ✅ Installed |
-| **Frontend** | lucide-react | ^0.383.0 | ✅ Installed |
-| **Frontend** | @tauri-apps/api | ^2 | ✅ Installed |
-| **Frontend** | @tauri-apps/plugin-* | ^2 | ✅ Installed |
-| **Backend** | tauri | ^2 | ✅ Installed |
-| **Backend** | tauri-plugin-* | ^2 | ✅ Installed |
-| **Python** | ollama | 0.6.2 | ✅ Installed |
-| **Python** | chromadb | 1.5.9 | ✅ Installed |
-| **Python** | transformers | 5.9.0 | ✅ Installed |
-| **Python** | torch | 2.12.0 | ✅ Installed |
-
-### 9.4 Build Commands
+### 4.2 Build Commands
 
 ```bash
 # Development
@@ -360,7 +281,7 @@ pnpm dev
 pnpm build
 ```
 
-### 9.5 Tauri Plugins
+### 4.3 Tauri Plugins
 
 | Plugin | Purpose | Status |
 |--------|---------|--------|
@@ -370,6 +291,151 @@ pnpm build
 | `tauri-plugin-shell` | Shell command execution | ✅ Configured |
 | `tauri-plugin-single-instance` | Single instance enforcement | ✅ Configured |
 
+### 4.4 Dependencies Status
+
+| Category | Package | Version | Status |
+|----------|---------|---------|--------|
+| **Rust** | rustc | 1.95.0 | ✅ Installed |
+| **Rust** | cargo | 1.95.0 | ✅ Installed |
+| **Rust** | tauri-cli | 2.10.1 | ✅ Installed |
+| **Node** | node | v20.20.2 | ✅ Installed |
+| **Node** | pnpm | 10.33.4 | ✅ Installed |
+| **Frontend** | react | ^19.0.0 | ✅ Installed |
+| **Frontend** | zustand | ^5.0.0 | ✅ Installed |
+| **Frontend** | lucide-react | ^0.383.0 | ✅ Installed |
+| **Frontend** | @tauri-apps/api | ^2 | ✅ Installed |
+| **Backend** | tauri | ^2 | ✅ Installed |
+| **Backend** | wayland-client | 0.31 | ✅ Installed |
+| **Python** | ollama | 0.6.2 | ✅ Installed |
+| **Python** | chromadb | 1.5.9 | ✅ Installed |
+| **Python** | transformers | 5.9.0 | ✅ Installed |
+| **Python** | torch | 2.12.0 | ✅ Installed |
+
 ---
 
-*Updated: Tauri 2 Integration · 2026-05-27*
+## 5. Side Panel Architecture
+
+### 5.1 Evolution of Approaches
+
+| Approach | Result | Cause |
+|----------|--------|-------|
+| PyQt6 QQuickWindow + QTimer | ❌ Crash | GLib re-entrancy on Wayland |
+| PyQt6 + QThread.pyqtSignal | ❌ Crash | sendPostedEvents re-entrancy |
+| PyQt6 + QMetaObject.invokeMethod | ❌ Crash | QueuedConnection still via GLib |
+| PyQt6 + Self-pipe trick | ⚠️ Unstable | SIGUSR1 toggle unreliable |
+| **QML Window (AppGrid pattern)** | ✅ **Stable** | Inside Plasma QML engine, no GLib issues |
+| **Tauri 2 + LayerShell** | ✅ **Stable** | Native wayland-client, no GLib/GTK |
+
+### 5.2 Key Components
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| QML Window | QtQuick.Window | Frameless, stays-on-top, tool |
+| Tauri Window | tauri::WebviewWindow | Frameless, LayerShell via wayland-client |
+| D-Bus signals | dbus_listener.py subprocess | Listen for StatusChanged, TokenStream, etc. |
+| D-Bus methods | dbus_helper.py subprocess | RunTask, StopTask, GetStatus |
+| Slide animation | Behavior on x (QML) / LayerShell (Tauri) | 200ms OutCubic |
+| Auto-show | Timer + xdotool (QML) / global-shortcut (Tauri) | Top-left corner / Meta+A |
+| Streaming | end4 pattern (QML) / Tauri events (React) | Append tokens to last message |
+
+---
+
+## 6. LLM Provider: llama.cpp
+
+### 6.1 Local Model
+
+| Parameter | Value |
+|-----------|-------|
+| Model | Qwen3.6-35B-A3B-IQ3_M.gguf |
+| Server | llama.cpp on port 8085 |
+| GPU | NVIDIA RTX 3070 (99 layers) |
+| Context | 368,640 tokens |
+| RAM cache | 49,152 MiB |
+| Quantization | IQ3_M (15.4 GB) |
+| Parameters | 34.6B (3.6B active) |
+
+### 6.2 Config
+
+```json
+{
+    "provider": "llama.cpp",
+    "model": "Qwen3.6-35B-A3B-IQ3_M.gguf",
+    "llama_host": "http://localhost:8085"
+}
+```
+
+---
+
+## 7. Memory Index
+
+### 7.1 Codebase Memory
+
+| Project | Nodes | Edges |
+|---------|-------|-------|
+| `linux-arch-kde-plasma-side-panel` | **1811** | **3199** |
+| `ecosystem` | 114,384 | 278,254 |
+| `mcp-configurator` | 307 | 352 |
+| `multi-game-ai-cheats` | 720 | 1030 |
+
+### 7.2 Lean-ctx
+
+| Metric | Value |
+|--------|-------|
+| Files indexed | 31 |
+| Symbols | 358 |
+| Edges | 35 |
+| Tokens indexed | 58,237 |
+| Last scan | 2026-05-26 23:30 |
+
+### 7.3 Engram
+
+| Metric | Value |
+|--------|-------|
+| Sessions | 9 |
+| Observations | 77 |
+| Projects | 1 (linux-arch-kde-plasma-side-panel) |
+
+---
+
+## 8. Known Issues
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Tauri app not tested on Wayland | 🔴 High | 📅 Needs testing |
+| LayerShell Rust implementation not tested | 🔴 High | 📅 Needs testing |
+| React frontend not connected to real agent | 🔴 High | 📅 Needs D-Bus service running |
+| SidePanelWindow QML not tested with Meta+A | 🟡 Medium | 📅 Needs testing |
+| RAG requires Ollama or large download | 🟢 Low | sentence-transformers fallback |
+| No Hybrid Search (BM25 + vector) | 🟡 Medium | 📅 Phase 5 |
+| No Agentic RAG | 🟡 Medium | 📅 Phase 5 |
+| No Multi-Agent Architecture | 🟡 Medium | 📅 Phase 5 |
+| No Plugin System | 🟡 Medium | 📅 Phase 5 |
+| MCP Security Hardening | 🟡 Medium | 📅 Phase 5 |
+
+---
+
+## 9. Phase Completion Summary
+
+### Phase 3 — Plasma Integration & Hardening ✅ COMPLETE
+
+| Milestone | Tasks | Status |
+|-----------|-------|--------|
+| **M1 — Plasma Polish** | FileTree + Config Persistence | ✅ Done |
+| **M2 — Test Coverage** | Pytest suite (86 tests) + MCP Config UI | ✅ Done |
+| **M3 — Cross-repo AI** | Cross-repo search + trace tools | ✅ Done |
+| **M4 — Extended Features** | Voice, Monitoring, TTS | ✅ Done |
+| **M5 — Side Panel** | QML Window, D-Bus listener, llama.cpp | ✅ Done |
+
+### Phase 4 — Tauri 2 Integration & Hybrid UI 🔄 IN PROGRESS
+
+| Milestone | Tasks | Status |
+|-----------|-------|--------|
+| **M1 — Tauri Scaffolding** | Cargo.toml, lib.rs, commands.rs, plugins | ✅ Done |
+| **M2 — React Frontend** | App.tsx, store, 4 components | ✅ Done |
+| **M3 — D-Bus Bridge** | dbus_listener.rs, commands.rs | ✅ Done |
+| **M4 — LayerShell** | wayland-client implementation | ✅ Done |
+| **M5 — Testing & Polish** | Build, test on Wayland, fix issues | 🔲 Pending |
+
+---
+
+*Updated: Phase 4 M1-M4 complete, M5 pending · 2026-05-27*

@@ -1,9 +1,39 @@
 # Планы и Рекомендации — KDE AI Agent Panel
 
-**Версия**: 1.1.0
-**Дата**: 2026-05-26
-**Автор**: 🏗️ Lead Architect
+**Версия**: 1.2.0
+**Дата**: 2026-05-27
+**Автор**: 🏗️ Lead Architect + OWL
 **Контекст**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · NVIDIA Wayland · llama.cpp Qwen3.6-35B
+
+## 🆕 Phase 5 — A2A Hub & Multi-Agent Chat (In Progress)
+
+### Что создано (2026-05-27)
+
+**A2A Hub** — центральный оркестратор для мульти-агентной коммуникации:
+- HTTP API сервер с 15+ endpoints
+- Agent Registry с heartbeat monitoring
+- Context Store с conversation log
+- Capability-based маршрутизация задач
+- 3 агента: owl-coder, owl-researcher, qwen-reviewer
+
+**D-Bus интеграция:**
+- org.kde.a2ahub сервис (методы + сигналы)
+- dbus_listener.py для QML интеграции
+- ConversationUpdated, NewMessage, AgentStatusChanged сигналы
+
+**KDE Plasma Side Panel:**
+- A2AChatView.qml — компонент для отображения conversation log
+- TabBar в SidePanelWindow.qml (Agent | A2A Hub)
+- Автоматическое обновление через polling
+
+**systemd services:**
+- a2a-hub@neo.service — автозапуск Hub
+- a2a-agents@neo.service — автозапуск агентов
+
+### Следующие шаги
+1. Исправить QML ошибку (LayerShell import) и протестировать панель
+2. Добавить отправку сообщений от пользователя к агентам через панель
+3. Тестировать полный цикл: панель → D-Bus → Hub → агенты
 
 ---
 

@@ -40,3 +40,59 @@ build/
 .bashrc.lean-ctx.bak
 **/node_modules/
 **/.pytest_cache/
+
+# A2A Hub — logs and temp files
+/tmp/owl-*.log
+/tmp/a2a-*.log
+/tmp/hub-*.log
+/tmp/qwen-*.log
+/tmp/conversation-*.log
+
+# A2A Hub — context store (local data, not for git)
+a2a_hub/context_store/
+a2a_hub/.context/
+
+# Python — additional
+*.pyd
+*.so
+.Python
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Rust — Tauri build artifacts
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# Node — build artifacts
+dist/
+node_modules/
+*.tsbuildinfo
+
+# IDE — additional
+*.code-workspace
+.project
+.settings/
+
+# OS — additional
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Secrets — never commit
+*.pem
+*.key
+.env
+.env.local
+config/secrets.yaml
+
+# Large model files
+*.gguf
+*.bin
+*.safetensors

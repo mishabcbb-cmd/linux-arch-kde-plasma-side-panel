@@ -1,0 +1,25 @@
+[Unit]
+Description=A2A LLM Agents (owl-coder, owl-researcher, qwen-reviewer)
+After=network.target a2a-hub.service
+Requires=a2a-hub.service
+
+[Service]
+Type=forking
+User=%I
+WorkingDirectory=/home/%I/ecosystem/linux-arch-kde-plasma-side-panel
+ExecStart=/bin/bash -c '\
+  OPENROUTER_API_KEY_1="${OPENROUTER_API_KEY}" \
+  OPENROUTER_API_KEY_2="${OPENROUTER_API_KEY}" \
+  nohup python a2a_hub/llm_agent/agent_server.py --name owl-coder --provider openrouter --model "openrouter/owl-alpha" --port 8091 --hub-url http://127.0.0.1:9000 --capabilities code_analysis code_generation debugging --api-key "$OPENROUTER_API_KEY_1" > /tmp/owl-coder.log 2>&1 & \
+  nohup python a2a_hub/llm_agent/agent_server.py --name owl-researcher --provider openrouter --model "openrouter/owl-alpha" --port 8092 --hub-url http://127.0.0.1:9000 --capabilities web_search summarization fact_checking research --api-key "$OPENROUTER_API_KEY_2" > /tmp/owl-researcher.log 2>&1 & \
+  nohup python a2a_hub/llm_agent/agent_server.py --name qwen-reviewer --provider llama.cpp --model "Qwen3.6-35B-A3B-wasserstein.IQ3_M" --port 8093 --hub-url http://127.0.0.1:9000 --capabilities quick_tasks simple_review formatting linting --llama-host http://127.0.0.1:8085 > /tmp/qwen-reviewer.log 2>&1 & \
+  sleep 2 && echo $! > /tmp/a2a-agents.pids'
+ExecStop=/bin/bash -c 'pkill -f "agent_server.py" 2>/dev/null; rm -f /tmp/a2a-agents.pids'
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=a2a-agents
+
+[Install]
+WantedBy=multi-user.target

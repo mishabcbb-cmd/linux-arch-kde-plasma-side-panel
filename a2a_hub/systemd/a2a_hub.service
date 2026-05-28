@@ -1,0 +1,25 @@
+[Unit]
+Description=A2A Hub — Agent-to-Agent Orchestration Server
+Documentation=https://github.com/a2aproject/A2A
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=%I
+WorkingDirectory=/home/%I/ecosystem/linux-arch-kde-plasma-side-panel/a2a_hub
+ExecStart=/usr/bin/python3 /home/%I/ecosystem/linux-arch-kde-plasma-side-panel/a2a_hub/run.py --config /home/%I/ecosystem/linux-arch-kde-plasma-side-panel/a2a_hub/config/agents.yaml
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=a2a_hub
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/%I/.local/share/a2a_hub
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,57 @@
+# A2A Hub — Agent Registry Configuration
+# 3 агента: 2x OWL (OpenRouter) + 1x Qwen (llama.cpp, 8GB VRAM — мелкие задачи)
+
+hub:
+  host: "127.0.0.1"
+  port: 9000
+  workspace: "~/.local/share/a2a-hub/workspace"
+  context_store: "~/.local/share/a2a-hub/context"
+  log_level: "info"
+
+agents:
+  - name: "owl-coder"
+    description: "OWL Coder — сложные задачи: архитектура, код, отладка (OpenRouter/owl-alpha)"
+    role: "api"
+    endpoint: "http://127.0.0.1:8091"
+    agent_card_url: "http://127.0.0.1:8091/.well-known/agent-card.json"
+    capabilities:
+      - "code_analysis"
+      - "code_generation"
+      - "debugging"
+      - "refactoring"
+      - "architecture"
+      - "complex_reasoning"
+    auth_type: "none"
+    status: "active"
+
+  - name: "owl-researcher"
+    description: "OWL Researcher — исследования, суммаризация, поиск (OpenRouter/owl-alpha)"
+    role: "api"
+    endpoint: "http://127.0.0.1:8092"
+    agent_card_url: "http://127.0.0.1:8092/.well-known/agent-card.json"
+    capabilities:
+      - "web_search"
+      - "summarization"
+      - "fact_checking"
+      - "research"
+      - "documentation"
+    auth_type: "none"
+    status: "active"
+
+  - name: "qwen-reviewer"
+    description: "Qwen Reviewer — мелкие задачи: форматтинг, линтинг, простые проверки (llama.cpp/Qwen3.6-35B, 8GB VRAM)"
+    role: "local"
+    endpoint: "http://127.0.0.1:8093"
+    agent_card_url: "http://127.0.0.1:8093/.well-known/agent-card.json"
+    capabilities:
+      - "quick_tasks"
+      - "simple_review"
+      - "formatting"
+      - "linting"
+    auth_type: "none"
+    status: "active"
+
+routing:
+  default_strategy: "capability_based"
+  max_hops: 3
+  agent_timeout: 180

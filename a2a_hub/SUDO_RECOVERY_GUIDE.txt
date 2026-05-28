@@ -1,0 +1,86 @@
+# A2A Hub — Гайд по восстановлению sudo и установке systemd services
+
+## Проблема
+После смены пароля пользователя `neo` перестал работать `sudo`.
+
+## Решение (через root доступ)
+
+### 1. Получить root доступ
+```bash
+su -c 'whoami' root
+# Ввести пароль root
+```
+
+### 2. Создать sudoers файл для пользователя neo
+```bash
+su -c 'echo "neo ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/neo && chmod 0440 /etc/sudoers.d/neo && visudo -c' root
+```
+
+### 3. Проверить что sudo работает
+```bash
+sudo whoami
+# Должно вернуть: neo
+```
+
+## Установка A2A Hub systemd services
+
+### 1. Скопировать service файлы
+```bash
+sudo cp a2a_hub/systemd/a2a_hub.service /etc/systemd/system/a2a-hub@.service
+sudo cp a2a_hub/systemd/a2a-agents.service /etc/systemd/system/a2a-agents@.service
+```
+
+### 2. Включить автозапуск
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable a2a-hub@neo
+sudo systemctl enable a2a-agents@neo
+```
+
+### 3. Запустить вручную
+```bash
+sudo systemctl start a2a-hub@neo
+sudo systemctl start a2a-agents@neo
+```
+
+### 4. Проверить статус
+```bash
+sudo systemctl status a2a-hub@neo
+sudo systemctl status a2a-agents@neo
+curl http://127.0.0.1:9000/health
+```
+
+## Запуск агентов вручную (без systemd)
+
+```bash
+cd /home/neo/ecosystem/linux-arch-kde-plasma-side-panel
+
+# Запустить Hub
+tmux new-session -d -s a2a-hub "python a2a_hub/run.py 2>&1 | tee /tmp/hub.log"
+
+# Запустить агентов
+tmux new-session -d -s a2a-agents
+tmux send-keys -t a2a-agents "cd /home/neo/ecosystem/linux-arch-kde-plasma-side-panel" Enter
+tmux send-keys -t a2a-agents "OPENROUTER_API_KEY='sk-or-v1-...' python a2a_hub/llm_agent/agent_server.py --name owl-coder --provider openrouter --model 'openrouter/owl-alpha' --port 8091 --hub-url http://127.0.0.1:9000 --capabilities code_analysis code_generation debugging --api-key \$OPENROUTER_API_KEY &" Enter
+tmux send-keys -t a2a-agents "python a2a_hub/llm_agent/agent_server.py --name qwen-reviewer --provider llama.cpp --model 'Qwen3.6-35B-A3B-wasserstein.IQ3_M' --port 8093 --hub-url http://127.0.0.1:9000 --capabilities quick_tasks simple_review formatting linting --llama-host http://127.0.0.1:8085 &" Enter
+```
+
+## Полезные команды
+
+```bash
+# Проверить что Hub работает
+curl http://127.0.0.1:9000/health
+
+# Список агентов
+curl http://127.0.0.1:9000/agents
+
+# Conversation log
+curl http://127.0.0.1:9000/conversations
+
+# Отправить задачу агенту
+curl -X POST http://127.0.0.1:8091/tasks/execute -H "Content-Type: application/json" -d '{"text":"Format this code: def foo(x,y):return x+y"}'
+
+# Посмотреть логи
+tmux attach -t a2a-hub
+tmux attach -t a2a-agents
+```
