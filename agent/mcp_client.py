@@ -295,13 +295,16 @@ class MCPClientManager:
         return tools
 
     def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        """Get OpenAI-compatible tool schemas for all MCP tools."""
+        """Get OpenAI-format tool schemas for all MCP tools."""
         schemas = []
         for tool in self.get_all_tools():
             schemas.append({
-                "name": tool.name,
-                "description": tool.description,
-                "input_schema": tool.input_schema,
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.input_schema,
+                },
                 "mcp_server": tool.server_name,
                 "auto_approved": tool.auto_approved,
             })

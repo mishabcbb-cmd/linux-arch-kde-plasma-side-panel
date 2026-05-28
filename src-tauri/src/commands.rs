@@ -33,11 +33,12 @@ impl AgentState {
     pub fn new() -> Self {
         Self {
             python_path: Mutex::new("python3".to_string()),
+            // Agent service runs from ~/.local/share/kde-ai-agent/agent/ (systemd)
             agent_dir: Mutex::new(
                 dirs::home_dir()
-                    .map(|d| d.join("ecosystem/linux-arch-kde-plasma-side-panel/agent"))
+                    .map(|d| d.join(".local/share/kde-ai-agent/agent"))
                     .and_then(|p| p.to_str().map(String::from))
-                    .unwrap_or_else(|| "/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/agent".to_string()),
+                    .unwrap_or_else(|| "/home/neo/.local/share/kde-ai-agent/agent".to_string()),
             ),
         }
     }
@@ -251,4 +252,26 @@ pub async fn check_agent_connected(
         }
         Err(_) => Ok(false),
     }
+}
+
+/// Kill all stale dbus_listener.py processes.
+/// Called on Tauri startup to prevent accumulation from previous runs.
+#[tauri::command]
+pub async fn cleanup_stale_listeners() -> Result<CommandResponse, String> {
+    let output = tokio::process::Command::new("pkill")
+        .args(["-f", "dbus_listener.py"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run pkill: {}", e))?;
+
+    // pkill returns 0 if it killed something, 1 if nothing matched — both are OK
+    let killed = output.status.code().unwrap_or(1) == 0;
+    Ok(CommandResponse {
+        success: true,
+        message: if killed {
+            "Cleaned up stale dbus_listener.py processes".to_string()
+        } else {
+            "No stale dbus_listener.py processes found".to_string()
+        },
+    })
 }

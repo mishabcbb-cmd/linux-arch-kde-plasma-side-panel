@@ -1,4 +1,4 @@
-a"""
+"""
 agent/tools.py — Tool implementations for the KDE AI Agent.
 
 Provides:
@@ -90,291 +90,322 @@ class ToolRegistry:
     def register(self, name: str, func: Callable[[Dict[str, Any]], ToolResult]) -> None:
         self._tools[name] = func
 
-    def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        """Return OpenAI/Anthropic-compatible tool definitions."""
+    # Internal tool definitions in a neutral format
+    _TOOL_DEFINITIONS: List[Dict[str, Any]] = [
+        {
+            "name": "bash_exec",
+            "description": (
+                "Execute a shell command in the project directory. "
+                "Returns stdout and stderr. Use for running build commands, "
+                "git operations, system queries, and code analysis tools. "
+                "Commands run non-interactively."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "cmd": {
+                        "type": "string",
+                        "description": "Shell command to execute (e.g. 'pytest tests/', 'npm run build')",
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Timeout in seconds (default: 120, max: 600)",
+                    },
+                },
+                "required": ["cmd"],
+            },
+        },
+        {
+            "name": "file_read",
+            "description": (
+                "Read a file from the project and return its contents with line numbers. "
+                "Use before editing files to understand their current state."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path to the file, relative to project root",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "1-based line offset to start reading from (default: 1)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of lines to return (default: 2000)",
+                    },
+                },
+                "required": ["path"],
+            },
+        },
+        {
+            "name": "file_write",
+            "description": (
+                "Write content to a file. Creates parent directories if they don't exist. "
+                "After writing, automatically stages the file with git add and creates a commit "
+                "with a descriptive message. Use this for ALL file creation and modification."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path to write the file, relative to project root",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The complete file content to write",
+                    },
+                    "commit_message": {
+                        "type": "string",
+                        "description": "Git commit message (auto-generated if not provided)",
+                    },
+                },
+                "required": ["path", "content"],
+            },
+        },
+        {
+            "name": "search_codebase",
+            "description": (
+                "Search the codebase using ripgrep. Returns matching file paths with line numbers "
+                "and surrounding context. Supports full regex syntax. "
+                "Use to find function definitions, usages, patterns, and TODO comments."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (regex supported, e.g. 'def handle_|class Agent')",
+                    },
+                    "file_pattern": {
+                        "type": "string",
+                        "description": "Optional file glob filter (e.g. '*.py', '*.qml')",
+                    },
+                    "context_lines": {
+                        "type": "integer",
+                        "description": "Lines of context around each match (default: 2)",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+        {
+            "name": "repo_map",
+            "description": (
+                "Generate a tree-sitter based structural summary of the codebase showing "
+                "all functions, classes, methods, and their signatures. "
+                "Like Aider's repo map — provides the LLM with a high-level understanding "
+                "of the project structure without reading every file."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "max_tokens": {
+                        "type": "integer",
+                        "description": "Approximate maximum tokens for the output (default: 1500)",
+                    }
+                },
+            },
+        },
+        {
+            "name": "run_tests",
+            "description": (
+                "Auto-detect the project's test framework and execute tests. "
+                "Supports pytest (Python), cargo test (Rust), npm test (JavaScript/TypeScript), "
+                "go test (Go), and ctest (C/C++). Returns test output with pass/fail summary."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Optional: specific test file or directory to run",
+                    }
+                },
+            },
+        },
+        {
+            "name": "ask_user",
+            "description": (
+                "Pause execution and ask the user a question via the QML UI. "
+                "Use ONLY when a genuine blocker requires human input — never for "
+                "confirmation of routine actions. The agent loop will wait for the user's response."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "question": {
+                        "type": "string",
+                        "description": "The question to display in the UI",
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional list of preset answer choices",
+                    },
+                },
+                "required": ["question"],
+            },
+        },
+        {
+            "name": "cross_repo_search",
+            "description": (
+                "Search across ALL indexed reference projects (OpenCode, Jarvis, Aider, "
+                "llama.cpp, and other open-source projects) for code patterns, functions, "
+                "classes, or architectural patterns. Uses the codebase-memory knowledge graph. "
+                "Returns matching symbols with their source project, file path, and description. "
+                "Use this to find how other projects implement similar features."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Natural language or keyword search query (e.g. 'MCP client implementation', 'tool registry pattern')",
+                    },
+                    "project": {
+                        "type": "string",
+                        "description": "Optional: limit search to a specific project (e.g. 'opencode-main', 'jarvis-main')",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results (default: 10, max: 30)",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+        {
+            "name": "cross_repo_trace",
+            "description": (
+                "Trace function calls, data flow, or cross-service calls through "
+                "a specific reference project's codebase. Uses the codebase-memory "
+                "knowledge graph to follow CALLS, DATA_FLOWS, and HTTP_CALLS edges. "
+                "Use this to understand how a specific function is called and what it calls."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "function_name": {
+                        "type": "string",
+                        "description": "Function or method name to trace (e.g. 'handleToolCall', 'RunTask')",
+                    },
+                    "project": {
+                        "type": "string",
+                        "description": "Project to trace in (e.g. 'opencode-main', 'jarvis-main')",
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": ["inbound", "outbound", "both"],
+                        "description": "Trace direction: inbound (callers), outbound (callees), or both (default: both)",
+                    },
+                    "depth": {
+                        "type": "integer",
+                        "description": "Trace depth (default: 2, max: 5)",
+                    },
+                },
+                "required": ["function_name", "project"],
+            },
+        },
+        {
+            "name": "system_monitor",
+            "description": (
+                "Get real-time system metrics: CPU usage, memory usage, CPU temperature, "
+                "disk usage, uptime, and kernel version. Reads from /proc filesystem. "
+                "Use this to diagnose performance issues or check system health."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "metrics": {
+                        "type": "string",
+                        "description": "Comma-separated list of metrics to fetch: cpu, memory, temp, disk, uptime, all (default: all)",
+                    },
+                },
+            },
+        },
+        {
+            "name": "voice_input",
+            "description": (
+                "Record audio from the microphone and transcribe it to text using "
+                "whisper.cpp or a system speech-to-text engine. "
+                "Use this to accept voice commands instead of typing."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "duration": {
+                        "type": "integer",
+                        "description": "Recording duration in seconds (default: 5, max: 30)",
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "Language code for transcription (default: 'en')",
+                    },
+                },
+            },
+        },
+        {
+            "name": "tts_output",
+            "description": (
+                "Convert text to speech and play it through the system speakers. "
+                "Uses system TTS engine (espeak-ng, festival, or speech-dispatcher). "
+                "Use this to read responses aloud or provide audio feedback."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": "Text to convert to speech",
+                    },
+                    "voice": {
+                        "type": "string",
+                        "description": "Voice name or language (default: 'en')",
+                    },
+                    "speed": {
+                        "type": "integer",
+                        "description": "Speech speed in words per minute (default: 150, range: 80-450)",
+                    },
+                },
+                "required": ["text"],
+            },
+        },
+    ]
+
+    def get_tool_schemas(self, fmt: str = "openai") -> List[Dict[str, Any]]:
+        """Return tool definitions in the requested format.
+
+        Args:
+            fmt: "openai" for OpenAI-compatible APIs (llama.cpp, OpenRouter),
+                 "anthropic" for Anthropic Claude API,
+                 "internal" for the raw neutral format.
+        """
+        if fmt == "internal":
+            return list(self._TOOL_DEFINITIONS)
+        if fmt == "anthropic":
+            return [
+                {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "input_schema": t["input_schema"],
+                }
+                for t in self._TOOL_DEFINITIONS
+            ]
+        # Default: OpenAI format
         return [
             {
-                "name": "bash_exec",
-                "description": (
-                    "Execute a shell command in the project directory. "
-                    "Returns stdout and stderr. Use for running build commands, "
-                    "git operations, system queries, and code analysis tools. "
-                    "Commands run non-interactively."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "cmd": {
-                            "type": "string",
-                            "description": "Shell command to execute (e.g. 'pytest tests/', 'npm run build')",
-                        },
-                        "timeout": {
-                            "type": "integer",
-                            "description": "Timeout in seconds (default: 120, max: 600)",
-                        },
-                    },
-                    "required": ["cmd"],
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
                 },
-            },
-            {
-                "name": "file_read",
-                "description": (
-                    "Read a file from the project and return its contents with line numbers. "
-                    "Use before editing files to understand their current state."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Path to the file, relative to project root",
-                        },
-                        "offset": {
-                            "type": "integer",
-                            "description": "1-based line offset to start reading from (default: 1)",
-                        },
-                        "limit": {
-                            "type": "integer",
-                            "description": "Maximum number of lines to return (default: 2000)",
-                        },
-                    },
-                    "required": ["path"],
-                },
-            },
-            {
-                "name": "file_write",
-                "description": (
-                    "Write content to a file. Creates parent directories if they don't exist. "
-                    "After writing, automatically stages the file with git add and creates a commit "
-                    "with a descriptive message. Use this for ALL file creation and modification."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Path to write the file, relative to project root",
-                        },
-                        "content": {
-                            "type": "string",
-                            "description": "The complete file content to write",
-                        },
-                        "commit_message": {
-                            "type": "string",
-                            "description": "Git commit message (auto-generated if not provided)",
-                        },
-                    },
-                    "required": ["path", "content"],
-                },
-            },
-            {
-                "name": "search_codebase",
-                "description": (
-                    "Search the codebase using ripgrep. Returns matching file paths with line numbers "
-                    "and surrounding context. Supports full regex syntax. "
-                    "Use to find function definitions, usages, patterns, and TODO comments."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search query (regex supported, e.g. 'def handle_|class Agent')",
-                        },
-                        "file_pattern": {
-                            "type": "string",
-                            "description": "Optional file glob filter (e.g. '*.py', '*.qml')",
-                        },
-                        "context_lines": {
-                            "type": "integer",
-                            "description": "Lines of context around each match (default: 2)",
-                        },
-                    },
-                    "required": ["query"],
-                },
-            },
-            {
-                "name": "repo_map",
-                "description": (
-                    "Generate a tree-sitter based structural summary of the codebase showing "
-                    "all functions, classes, methods, and their signatures. "
-                    "Like Aider's repo map — provides the LLM with a high-level understanding "
-                    "of the project structure without reading every file."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "max_tokens": {
-                            "type": "integer",
-                            "description": "Approximate maximum tokens for the output (default: 1500)",
-                        }
-                    },
-                },
-            },
-            {
-                "name": "run_tests",
-                "description": (
-                    "Auto-detect the project's test framework and execute tests. "
-                    "Supports pytest (Python), cargo test (Rust), npm test (JavaScript/TypeScript), "
-                    "go test (Go), and ctest (C/C++). Returns test output with pass/fail summary."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Optional: specific test file or directory to run",
-                        }
-                    },
-                },
-            },
-            {
-                "name": "ask_user",
-                "description": (
-                    "Pause execution and ask the user a question via the QML UI. "
-                    "Use ONLY when a genuine blocker requires human input — never for "
-                    "confirmation of routine actions. The agent loop will wait for the user's response."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "question": {
-                            "type": "string",
-                            "description": "The question to display in the UI",
-                        },
-                        "options": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "Optional list of preset answer choices",
-                        },
-                    },
-                    "required": ["question"],
-                },
-            },
-            {
-                "name": "cross_repo_search",
-                "description": (
-                    "Search across ALL indexed reference projects (OpenCode, Jarvis, Aider, "
-                    "llama.cpp, and other open-source projects) for code patterns, functions, "
-                    "classes, or architectural patterns. Uses the codebase-memory knowledge graph. "
-                    "Returns matching symbols with their source project, file path, and description. "
-                    "Use this to find how other projects implement similar features."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Natural language or keyword search query (e.g. 'MCP client implementation', 'tool registry pattern')",
-                        },
-                        "project": {
-                            "type": "string",
-                            "description": "Optional: limit search to a specific project (e.g. 'opencode-main', 'jarvis-main')",
-                        },
-                        "limit": {
-                            "type": "integer",
-                            "description": "Maximum number of results (default: 10, max: 30)",
-                        },
-                    },
-                    "required": ["query"],
-                },
-            },
-            {
-                "name": "cross_repo_trace",
-                "description": (
-                    "Trace function calls, data flow, or cross-service calls through "
-                    "a specific reference project's codebase. Uses the codebase-memory "
-                    "knowledge graph to follow CALLS, DATA_FLOWS, and HTTP_CALLS edges. "
-                    "Use this to understand how a specific function is called and what it calls."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "function_name": {
-                            "type": "string",
-                            "description": "Function or method name to trace (e.g. 'handleToolCall', 'RunTask')",
-                        },
-                        "project": {
-                            "type": "string",
-                            "description": "Project to trace in (e.g. 'opencode-main', 'jarvis-main')",
-                        },
-                        "direction": {
-                            "type": "string",
-                            "enum": ["inbound", "outbound", "both"],
-                            "description": "Trace direction: inbound (callers), outbound (callees), or both (default: both)",
-                        },
-                        "depth": {
-                            "type": "integer",
-                            "description": "Trace depth (default: 2, max: 5)",
-                        },
-                    },
-                    "required": ["function_name", "project"],
-                },
-            },
-            {
-                "name": "system_monitor",
-                "description": (
-                    "Get real-time system metrics: CPU usage, memory usage, CPU temperature, "
-                    "disk usage, uptime, and kernel version. Reads from /proc filesystem. "
-                    "Use this to diagnose performance issues or check system health."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "metrics": {
-                            "type": "string",
-                            "description": "Comma-separated list of metrics to fetch: cpu, memory, temp, disk, uptime, all (default: all)",
-                        },
-                    },
-                },
-            },
-            {
-                "name": "voice_input",
-                "description": (
-                    "Record audio from the microphone and transcribe it to text using "
-                    "whisper.cpp or a system speech-to-text engine. "
-                    "Use this to accept voice commands instead of typing."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "duration": {
-                            "type": "integer",
-                            "description": "Recording duration in seconds (default: 5, max: 30)",
-                        },
-                        "language": {
-                            "type": "string",
-                            "description": "Language code for transcription (default: 'en')",
-                        },
-                    },
-                },
-            },
-            {
-                "name": "tts_output",
-                "description": (
-                    "Convert text to speech and play it through the system speakers. "
-                    "Uses system TTS engine (espeak-ng, festival, or speech-dispatcher). "
-                    "Use this to read responses aloud or provide audio feedback."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "text": {
-                            "type": "string",
-                            "description": "Text to convert to speech",
-                        },
-                        "voice": {
-                            "type": "string",
-                            "description": "Voice name or language (default: 'en')",
-                        },
-                        "speed": {
-                            "type": "integer",
-                            "description": "Speech speed in words per minute (default: 150, range: 80-450)",
-                        },
-                    },
-                    "required": ["text"],
-                },
-            },
+            }
+            for t in self._TOOL_DEFINITIONS
         ]
 
     def execute(self, name: str, args: Dict[str, Any]) -> ToolResult:

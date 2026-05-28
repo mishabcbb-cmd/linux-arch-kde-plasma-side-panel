@@ -394,7 +394,23 @@ class OllamaProvider(BaseLLMProvider):
         if sp:
             body["messages"].insert(0, {"role": "system", "content": sp})
         if tools:
-            body["tools"] = tools
+            # Ollama expects OpenAI-format tools
+            openai_tools = []
+            for t in tools:
+                if "function" in t:
+                    openai_tools.append(t)
+                elif "name" in t and "input_schema" in t:
+                    openai_tools.append({
+                        "type": "function",
+                        "function": {
+                            "name": t["name"],
+                            "description": t.get("description", ""),
+                            "parameters": t["input_schema"],
+                        },
+                    })
+                else:
+                    openai_tools.append(t)
+            body["tools"] = openai_tools
         return body
 
     def send_message(self, messages, tools=None, system_prompt=None) -> ProviderResponse:
@@ -414,9 +430,26 @@ class OllamaProvider(BaseLLMProvider):
                 # Fallback to reasoning_content for models using thinking mode (e.g., Qwen)
                 if not response_content and msg_data.get("reasoning_content"):
                     response_content = msg_data["reasoning_content"]
+                # Convert OpenAI-format tool_calls to internal format
+                raw_tool_calls = msg_data.get("tool_calls", [])
+                converted_tool_calls = []
+                for tc in raw_tool_calls:
+                    if "function" in tc:
+                        try:
+                            tool_input = json.loads(tc["function"].get("arguments", "{}"))
+                        except (json.JSONDecodeError, TypeError):
+                            tool_input = {"raw": tc["function"].get("arguments", "")}
+                        converted_tool_calls.append({
+                            "id": tc.get("id", ""),
+                            "name": tc["function"]["name"],
+                            "input": tool_input,
+                        })
+                    else:
+                        converted_tool_calls.append(tc)
+
                 return ProviderResponse(
                     content=response_content,
-                    tool_calls=msg_data.get("tool_calls", []),
+                    tool_calls=converted_tool_calls,
                     finish_reason="stop",
                     model=self.model,
                     usage=TokenUsage(
@@ -442,6 +475,10 @@ class OllamaProvider(BaseLLMProvider):
         try:
             with urllib.request.urlopen(req, timeout=120) as resp:
                 buffer = b""
+                # Accumulate tool calls across streaming chunks
+                _partial_tools: Dict[int, Dict[str, Any]] = {}
+                _partial_tool_args: Dict[int, str] = {}
+
                 while True:
                     chunk = resp.read(4096)
                     if not chunk:
@@ -458,7 +495,44 @@ class OllamaProvider(BaseLLMProvider):
                             content = msg_data.get("content", "")
                             if content:
                                 yield StreamEvent(type=EventType.CONTENT_DELTA, content=content)
+
+                            # Parse tool_calls from Ollama streaming
+                            raw_tcs = msg_data.get("tool_calls", [])
+                            for tc in raw_tcs:
+                                idx = tc.get("index", 0)
+                                tc_id = tc.get("id")
+                                tc_fn = tc.get("function", {})
+                                if tc_id and tc_fn.get("name"):
+                                    _partial_tools[idx] = {"id": tc_id, "name": tc_fn["name"]}
+                                    _partial_tool_args[idx] = ""
+                                    yield StreamEvent(
+                                        type=EventType.TOOL_USE_START,
+                                        tool_call={"id": tc_id, "name": tc_fn["name"]},
+                                    )
+                                if tc_fn.get("arguments"):
+                                    _partial_tool_args[idx] = _partial_tool_args.get(idx, "") + tc_fn["arguments"]
+                                    yield StreamEvent(type=EventType.TOOL_USE_DELTA, content=tc_fn["arguments"])
+
                             if data.get("done", False):
+                                # Finalize accumulated tool calls
+                                for idx in sorted(_partial_tools.keys()):
+                                    tc = _partial_tools[idx]
+                                    args_str = _partial_tool_args.get(idx, "")
+                                    try:
+                                        tool_input = json.loads(args_str) if args_str else {}
+                                    except json.JSONDecodeError:
+                                        tool_input = {"raw": args_str}
+                                    yield StreamEvent(
+                                        type=EventType.TOOL_USE_STOP,
+                                        tool_call={
+                                            "id": tc["id"],
+                                            "name": tc["name"],
+                                            "input": tool_input,
+                                        },
+                                    )
+                                _partial_tools.clear()
+                                _partial_tool_args.clear()
+
                                 yield StreamEvent(
                                     type=EventType.CONTENT_STOP,
                                     response=ProviderResponse(
@@ -529,7 +603,26 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         if sp:
             body["messages"].insert(0, {"role": "system", "content": sp})
         if tools:
-            body["tools"] = tools
+            # Convert from internal format to OpenAI format
+            openai_tools = []
+            for t in tools:
+                if "function" in t:
+                    # Already OpenAI format
+                    openai_tools.append(t)
+                elif "name" in t and "input_schema" in t:
+                    # Anthropic/internal format → convert
+                    openai_tools.append({
+                        "type": "function",
+                        "function": {
+                            "name": t["name"],
+                            "description": t.get("description", ""),
+                            "parameters": t["input_schema"],
+                        },
+                    })
+                else:
+                    # Unknown format, pass through
+                    openai_tools.append(t)
+            body["tools"] = openai_tools
         return body
 
     def send_message(self, messages, tools=None, system_prompt=None) -> ProviderResponse:
@@ -551,9 +644,26 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 response_content = msg.get("content", "") or ""
                 if not response_content and msg.get("reasoning_content"):
                     response_content = msg["reasoning_content"]
+                # Convert OpenAI-format tool_calls to internal format
+                raw_tool_calls = msg.get("tool_calls", [])
+                converted_tool_calls = []
+                for tc in raw_tool_calls:
+                    if "function" in tc:
+                        try:
+                            tool_input = json.loads(tc["function"].get("arguments", "{}"))
+                        except (json.JSONDecodeError, TypeError):
+                            tool_input = {"raw": tc["function"].get("arguments", "")}
+                        converted_tool_calls.append({
+                            "id": tc.get("id", ""),
+                            "name": tc["function"]["name"],
+                            "input": tool_input,
+                        })
+                    else:
+                        converted_tool_calls.append(tc)
+
                 return ProviderResponse(
                     content=response_content,
-                    tool_calls=msg.get("tool_calls", []),
+                    tool_calls=converted_tool_calls,
                     finish_reason=choice.get("finish_reason", "stop"),
                     model=data.get("model", self.model),
                     usage=TokenUsage(
@@ -579,6 +689,10 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         try:
             with urllib.request.urlopen(req, timeout=120) as resp:
                 buffer = b""
+                # Accumulate tool calls across SSE events
+                _partial_tools: Dict[int, Dict[str, Any]] = {}
+                _partial_tool_args: Dict[int, str] = {}
+
                 for chunk in iter(lambda: resp.read(1), b""):
                     buffer += chunk
                     while b"\n\n" in buffer:
@@ -591,15 +705,24 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                             yield StreamEvent(type=EventType.CONTENT_STOP)
                             continue
                         try:
-                            for event in self._parse_sse_event(json.loads(data_str)):
+                            for event in self._parse_sse_event(
+                                json.loads(data_str),
+                                _partial_tools,
+                                _partial_tool_args,
+                            ):
                                 yield event
                         except json.JSONDecodeError:
                             pass
+
                 if buffer.strip():
                     line = buffer.decode("utf-8").strip()
                     if line.startswith("data: ") and line[6:] != "[DONE]":
                         try:
-                            for event in self._parse_sse_event(json.loads(line[6:])):
+                            for event in self._parse_sse_event(
+                                json.loads(line[6:]),
+                                _partial_tools,
+                                _partial_tool_args,
+                            ):
                                 yield event
                         except json.JSONDecodeError:
                             pass
@@ -610,7 +733,12 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             logger.error(f"OpenAI-compatible streaming error: {exc}")
             yield StreamEvent(type=EventType.ERROR, error=str(exc))
 
-    def _parse_sse_event(self, data: Dict[str, Any]) -> Generator[StreamEvent, None, None]:
+    def _parse_sse_event(
+        self,
+        data: Dict[str, Any],
+        partial_tools: Optional[Dict[int, Dict[str, Any]]] = None,
+        partial_tool_args: Optional[Dict[int, str]] = None,
+    ) -> Generator[StreamEvent, None, None]:
         choices = data.get("choices", [])
         if not choices:
             return
@@ -621,19 +749,50 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         if "content" in delta and delta["content"]:
             yield StreamEvent(type=EventType.CONTENT_DELTA, content=delta["content"])
 
+        if "reasoning_content" in delta and delta["reasoning_content"]:
+            yield StreamEvent(type=EventType.THINKING_DELTA, thinking=delta["reasoning_content"])
+
         if "tool_calls" in delta:
             for tc in delta["tool_calls"]:
+                idx = tc.get("index", 0)
                 tc_id = tc.get("id")
                 tc_fn = tc.get("function", {})
                 if tc_id and tc_fn.get("name"):
+                    # Start of a new tool call
+                    if partial_tools is not None:
+                        partial_tools[idx] = {"id": tc_id, "name": tc_fn["name"]}
+                        partial_tool_args[idx] = ""
                     yield StreamEvent(
                         type=EventType.TOOL_USE_START,
                         tool_call={"id": tc_id, "name": tc_fn["name"]},
                     )
                 if tc_fn.get("arguments"):
+                    if partial_tool_args is not None and idx in partial_tool_args:
+                        partial_tool_args[idx] += tc_fn["arguments"]
                     yield StreamEvent(type=EventType.TOOL_USE_DELTA, content=tc_fn["arguments"])
 
-        if finish_reason:
+        if finish_reason == "tool_calls":
+            # Finalize all accumulated tool calls
+            if partial_tools is not None:
+                for idx in sorted(partial_tools.keys()):
+                    tc = partial_tools[idx]
+                    args_str = partial_tool_args.get(idx, "")
+                    try:
+                        tool_input = json.loads(args_str) if args_str else {}
+                    except json.JSONDecodeError:
+                        tool_input = {"raw": args_str}
+                    yield StreamEvent(
+                        type=EventType.TOOL_USE_STOP,
+                        tool_call={
+                            "id": tc["id"],
+                            "name": tc["name"],
+                            "input": tool_input,
+                        },
+                    )
+                partial_tools.clear()
+                partial_tool_args.clear()
+
+        if finish_reason and finish_reason != "tool_calls":
             usage_data = data.get("usage", {})
             yield StreamEvent(
                 type=EventType.CONTENT_STOP,

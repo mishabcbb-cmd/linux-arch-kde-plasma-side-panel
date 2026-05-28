@@ -169,11 +169,19 @@ export default function App() {
           refreshStatus();
           break;
 
+        case "_listener_stopped":
+          log.warn("D-Bus listener stopped");
+          addMessage({
+            type: "error",
+            content: "⚠️ D-Bus signal listener disconnected. Restart Tauri to reconnect.",
+          });
+          break;
+
         default:
           log.debug("Unhandled D-Bus signal:", signalType, msg);
       }
     },
-    [setConnected, setStatus, addMessage, appendToken]
+    [setConnected, setStatus, addMessage, appendToken, refreshStatus]
   );
 
   // ── Refresh agent status via Tauri command ──

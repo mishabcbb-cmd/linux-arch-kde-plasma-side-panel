@@ -1,7 +1,7 @@
 # Планы и Рекомендации — KDE AI Agent Panel
 
-**Версия**: 1.2.0
-**Дата**: 2026-05-27
+**Версия**: 1.2.1
+**Дата**: 2026-05-28
 **Автор**: 🏗️ Lead Architect + OWL
 **Контекст**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · NVIDIA Wayland · llama.cpp Qwen3.6-35B
 
@@ -937,3 +937,57 @@ void AppGridPlugin::configureWayland(QWindow *window) {
 | TypeScript | ✅ Essential | Low |
 | PostCSS/Autoprefixer | ✅ Needed for vendor prefixes | Low |
 | Tauri CLI | ✅ Required for build | Low |
+
+---
+
+## 🆕 Bugfix 2026-05-28 — Tool Schema Format Mismatch
+
+### Проблема
+Agent loop делал 50 итераций с 0 tool calls, заканчивался ошибкой `Max iterations reached without completion`.
+
+### Корневая причина
+`ToolRegistry.get_tool_schemas()` возвращал формат `{name, description, input_schema}` (Anthropic-стиль), а llama.cpp/Ollama/OpenRouter ожидают `{type: "function", function: {name, description, parameters}}`. LLM не видел инструменты → не делал tool calls.
+
+### Исправления
+- `agent/tools.py` — `get_tool_schemas(fmt="openai")` с 3 форматами, по умолчанию OpenAI
+- `agent/llm_client.py` — конвертация форматов в `_build_body()`, парсинг tool_calls в `_parse_sse_event()` и `OllamaProvider.stream_message()`, конвертация tool_calls в `send_message()`
+- `agent/mcp_client.py` — `get_tool_schemas()` возвращает OpenAI-формат
+- `agent/context_manager.py` — добавлен `## Tool Use Policy` в system prompt
+
+### Статус
+✅ Исправлено, протестировано и подтверждено работающим — агент ответил голосом "Hello, how can I help you today?"
+
+### Важное примечание
+Агент-сервис запускает код из `~/.local/share/kde-ai-agent/agent/`, а не из репозитория. При любых изменениях в agent/ нужно копировать файлы:
+```bash
+cp agent/tools.py ~/.local/share/kde-ai-agent/agent/tools.py
+cp agent/llm_client.py ~/.local/share/kde-ai-agent/agent/llm_client.py
+cp agent/mcp_client.py ~/.local/share/kde-ai-agent/agent/mcp_client.py
+cp agent/context_manager.py ~/.local/share/kde-ai-agent/agent/context_manager.py
+```
+
+## 🧪 Tauri Wayland Testing Results (2026-05-28)
+
+### Что протестировано
+- `cargo tauri dev` запущен на Wayland (Arch Linux · KDE Plasma 6 · NVIDIA RTX 3070)
+- Tauri работает через XWayland (`GDK_BACKEND=x11`)
+- D-Bus bridge: React → Tauri commands → Python dbus_helper.py → D-Bus → Agent
+- D-Bus signals: Rust → Python dbus_listener.py → Tauri events → React
+
+### Результаты
+| Компонент | Статус |
+|-----------|--------|
+| Tauri компиляция | ✅ Работает |
+| Tauri окно на экране | ✅ 400×700, позиция (2240, 863) |
+| D-Bus bridge (commands) | ✅ get_status, run_task, stop_task |
+| D-Bus signals (events) | ✅ StatusChanged, TokenStream, ToolCallResult, TaskComplete |
+| Agent выполнение задачи | ✅ "What is 2+2?" → 6 iter, 4 tool calls, complete |
+| LayerShell | ❌ Отключен (конфликт GTK + wayland-client) |
+| React frontend в Tauri | ⚠️ Vite dev server работает, DevTools не открыт |
+
+### Следующие шаги
+1. Открыть DevTools в Tauri и проверить React консоль на ошибки
+2. Протестировать Meta+A shortcut для QML SidePanel
+3. Реализовать очистку старых dbus_listener.py процессов
+4. Исследовать gtk4-layer-shell для настоящей LayerShell интеграции
+5. Протестировать Tauri на чистом Wayland (без XWayland) — возможно потребуется `WEBKIT_DISABLE_COMPOSITING_MODE=1`

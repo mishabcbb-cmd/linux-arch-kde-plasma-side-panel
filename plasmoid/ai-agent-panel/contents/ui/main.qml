@@ -68,17 +68,9 @@ PlasmoidItem {
         }
     }
 
-    // ── Side panel window component ──
-    Component {
-        id: sideWindowComponent
-        SidePanelWindow {
-            agentStatus: kicker.agentStatus
-            chatMessages: kicker.chatMessages
-            contextFiles: kicker.contextFiles
-
-            onCloseRequested: kicker.closeWindow()
-        }
-    }
+    // ── Side panel window component (loaded from file) ──
+    // SidePanelWindow is a QML file, not a registered type — use Qt.createComponent
+    property var sideWindowComponent: null
 
     // ── Toggle window ──
     function toggleWindow() {
@@ -92,12 +84,28 @@ PlasmoidItem {
     function openWindow() {
         sideOpen = true
         if (!sideWindow) {
-            sideWindow = sideWindowComponent.createObject(kicker)
-            // LayerShell configuration is handled by QML attached properties
-            // in SidePanelWindow.qml — no C++ plugin needed.
-            // See: org.kde.layershell import + LayerShell.Window.* attached props
+            if (!sideWindowComponent) {
+                sideWindowComponent = Qt.resolvedUrl("SidePanelWindow.qml")
+            }
+            var comp = Qt.createComponent(sideWindowComponent)
+            if (comp.status === Component.Ready) {
+                sideWindow = comp.createObject(kicker, {
+                    "agentStatus": kicker.agentStatus,
+                    "chatMessages": kicker.chatMessages,
+                    "contextFiles": kicker.contextFiles
+                })
+                if (sideWindow) {
+                    sideWindow.closeRequested.connect(kicker.closeWindow)
+                }
+            } else if (comp.status === Component.Error) {
+                console.error("[main.qml] Failed to load SidePanelWindow.qml:", comp.errorString())
+                sideOpen = false
+                return
+            }
         }
-        sideWindow.showPanel()
+        if (sideWindow) {
+            sideWindow.showPanel()
+        }
     }
 
     function closeWindow() {

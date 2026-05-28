@@ -14,10 +14,11 @@
 
 use std::process::Stdio;
 use tauri::Emitter;
+use tauri::async_runtime::spawn;
 
 /// Spawn the dbus_listener.py subprocess and forward D-Bus signals as Tauri events.
 pub fn spawn_dbus_listener(app_handle: tauri::AppHandle, agent_dir: String) {
-    tokio::spawn(async move {
+    spawn(async move {
         let listener_path = std::path::PathBuf::from(&agent_dir).join("dbus_listener.py");
         if !listener_path.exists() {
             log::error!("dbus_listener.py not found at {:?}", listener_path);

@@ -408,6 +408,7 @@ class AgentLoop:
                     })
 
                 elif event.type == EventType.THINKING_DELTA:
+                    full_content += event.thinking
                     self._emit_signal(AgentSignalType.TOKEN_STREAM, {
                         "content": event.thinking,
                         "type": "thinking",
@@ -440,6 +441,16 @@ class AgentLoop:
                     if event.response and event.response.usage:
                         self._accumulated_tokens.input_tokens += event.response.usage.input_tokens
                         self._accumulated_tokens.output_tokens += event.response.usage.output_tokens
+                    # Finalize any pending tool calls from streaming
+                    if current_tool:
+                        if current_tool_input:
+                            try:
+                                current_tool["input"] = json.loads(current_tool_input)
+                            except json.JSONDecodeError:
+                                current_tool["input"] = {"raw": current_tool_input}
+                        tool_calls.append(current_tool)
+                        current_tool = None
+                        current_tool_input = ""
 
                 elif event.type == EventType.ERROR:
                     self._emit_signal(AgentSignalType.ERROR, {"error": event.error or "Unknown error"})

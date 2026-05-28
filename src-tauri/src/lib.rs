@@ -11,6 +11,7 @@
 
 mod commands;
 mod dbus_listener;
+#[allow(dead_code)]
 mod layer_shell;
 
 use commands::AgentState;
@@ -30,6 +31,7 @@ pub fn run() {
             commands::stop_task,
             commands::provide_response,
             commands::check_agent_connected,
+            commands::cleanup_stale_listeners,
         ])
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_autostart::init(
@@ -44,20 +46,29 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
+            // ── 0. Clean up stale dbus_listener.py from previous runs ──
+            log::info!("Cleaning up stale dbus_listener.py processes...");
+            let _ = std::process::Command::new("pkill")
+                .args(["-f", "dbus_listener.py"])
+                .output();
+
             // ── 1. Start D-Bus signal listener (Python subprocess) ──
+            // Agent service runs from ~/.local/share/kde-ai-agent/agent/ (systemd)
             let agent_dir = dirs::home_dir()
-                .map(|d| d.join("ecosystem/linux-arch-kde-plasma-side-panel/agent"))
+                .map(|d| d.join(".local/share/kde-ai-agent/agent"))
                 .and_then(|p| p.to_str().map(String::from))
                 .unwrap_or_else(|| {
-                    "/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/agent".to_string()
+                    "/home/neo/.local/share/kde-ai-agent/agent".to_string()
                 });
 
             dbus_listener::spawn_dbus_listener(app_handle.clone(), agent_dir);
             log::info!("D-Bus signal listener (Python subprocess) started");
 
-            // ── 2. Configure LayerShell for Wayland side panel (stub) ──
-            let layer_config = layer_shell::right_panel(400);
-            layer_shell::setup_layer_shell(&app_handle, &layer_config);
+            // ── 2. LayerShell disabled for initial Wayland test ──
+            // LayerShell requires a separate Wayland connection which conflicts
+            // with Tauri's GTK Wayland backend. Re-enable after investigating
+            // gtk4-layer-shell integration or KWin native panel protocol.
+            log::info!("LayerShell: disabled for initial Wayland test");
 
             Ok(())
         })
