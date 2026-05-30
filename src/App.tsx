@@ -33,7 +33,6 @@ interface CommandResponse {
 
 export default function App() {
   const connected = useAgentStore((s) => s.connected);
-  const status = useAgentStore((s) => s.status);
   const contextFiles = useAgentStore((s) => s.contextFiles);
   const removeContextFile = useAgentStore((s) => s.removeContextFile);
   const clearMessages = useAgentStore((s) => s.clearMessages);
@@ -93,7 +92,6 @@ export default function App() {
 
       switch (signalType) {
         case "_listener_started":
-          // Listener connected — refresh status
           refreshStatus();
           break;
 
@@ -256,18 +254,6 @@ export default function App() {
     [addContextFile, setFileTreeOpen]
   );
 
-  // ── Status label map (matches QML header) ──
-  const statusLabel = (() => {
-    switch (status) {
-      case "idle": return "Ready";
-      case "thinking": return "Thinking...";
-      case "executing": return "Working...";
-      case "waiting_user": return "Waiting...";
-      case "error": return "Error";
-      default: return status;
-    }
-  })();
-
   return (
     <div
       className="h-screen w-full flex flex-col overflow-hidden select-none"
@@ -288,28 +274,28 @@ export default function App() {
           AI Agent
         </span>
 
+        {/* Connection dot + status pushed to right before close button */}
         <div className="flex-1" />
 
-        {/* Connection indicator */}
-        <div
-          className="w-2 h-2 rounded-full"
-          style={{
-            backgroundColor: connected ? "#639922" : "#E24B4A",
-            opacity: connected ? 1 : 0.5,
-          }}
-        />
+        <div className="flex items-center gap-1.5">
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{
+              backgroundColor: connected ? "#639922" : "#E24B4A",
+              opacity: connected ? 1 : 0.5,
+            }}
+          />
+          <span
+            className="text-xs"
+            style={{ color: "var(--text-disabled, #7f8c8d)" }}
+          >
+            {connected ? "Connected" : "Disconnected"}
+          </span>
+        </div>
 
-        {/* Status text */}
-        <span
-          className="text-xs"
-          style={{ color: "var(--text-disabled, #7f8c8d)" }}
-        >
-          {statusLabel}
-        </span>
-
-        {/* Close button */}
+        {/* Close button — far right */}
         <button
-          className="p-1 rounded hover:opacity-80 transition-colors"
+          className="p-1 rounded hover:opacity-80 transition-colors ml-1"
           style={{ color: "var(--text-secondary)" }}
           title="Close"
         >
@@ -319,8 +305,11 @@ export default function App() {
         </button>
       </div>
 
-      {/* ── Chat messages ── */}
-      <ChatView onProvideUserResponse={handleProvideResponse} />
+      {/* ── Chat messages — fills all available space ── */}
+      <ChatView
+        onProvideUserResponse={handleProvideResponse}
+        onStop={handleStop}
+      />
 
       {/* ── Context file chips ── */}
       {contextFiles.length > 0 && (
@@ -354,7 +343,6 @@ export default function App() {
 
       {/* ── Status bar ── */}
       <StatusBar
-        onRun={() => refreshStatus()}
         onStop={handleStop}
         onClear={clearMessages}
         onToggleFileTree={() => setFileTreeOpen(true)}

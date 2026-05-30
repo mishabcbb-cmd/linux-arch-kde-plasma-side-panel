@@ -40,11 +40,15 @@ const BG_MAP: Record<MessageType, string> = {
 
 interface ChatViewProps {
   onProvideUserResponse: (response: string) => void;
+  onStop: () => void;
 }
 
-export default function ChatView({ onProvideUserResponse }: ChatViewProps) {
+export default function ChatView({ onProvideUserResponse, onStop }: ChatViewProps) {
   const messages = useAgentStore((s) => s.messages);
+  const status = useAgentStore((s) => s.status);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const isBusy = status === "thinking" || status === "executing";
 
   // Auto-scroll to bottom on new messages (matches QML positionViewAtEnd)
   useEffect(() => {
@@ -53,26 +57,61 @@ export default function ChatView({ onProvideUserResponse }: ChatViewProps) {
     }
   }, [messages]);
 
-  if (messages.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center opacity-50">
-          <div className="text-4xl mb-4">🤖</div>
-          <div className="text-lg font-medium" style={{ color: "var(--text-primary)" }}>
-            AI Agent Ready
-          </div>
-          <div className="text-sm mt-2" style={{ color: "var(--text-disabled)" }}>
-            Type a task below to get started.
-            <br />
-            The agent can read, write, search, and test code.
+  return (
+    <div
+      ref={scrollRef}
+      className="flex-1 overflow-y-auto px-3 py-2 space-y-1"
+      style={{
+        borderBottom: "1px solid var(--border-color, rgba(255,255,255,0.06))",
+      }}
+    >
+      {/* Empty state — only when no messages AND not busy */}
+      {messages.length === 0 && !isBusy && (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center opacity-40">
+            <div className="text-3xl mb-3">🤖</div>
+            <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+              AI Agent Panel
+            </div>
+            <div className="text-xs mt-1" style={{ color: "var(--text-disabled)" }}>
+              Describe a task below to get started
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+      {/* Busy indicator — shown when no messages yet but agent is working */}
+      {messages.length === 0 && isBusy && (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="flex items-center gap-2 justify-center mb-2">
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{
+                  backgroundColor: status === "thinking" ? "#3DAEE9" : "#EF9F27",
+                  animation: "pulse 1s ease-in-out infinite",
+                }}
+              />
+              <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                {status === "thinking" ? "Thinking..." : "Working..."}
+              </span>
+            </div>
+            <button
+              onClick={onStop}
+              className="px-3 py-1 text-xs rounded-md border hover:opacity-80 transition-colors"
+              style={{
+                borderColor: "rgba(226, 75, 74, 0.4)",
+                color: "#E24B4A",
+                backgroundColor: "rgba(226, 75, 74, 0.08)",
+              }}
+            >
+              Stop
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Messages */}
       {messages.map((msg) => (
         <div
           key={msg.id}
@@ -128,6 +167,19 @@ export default function ChatView({ onProvideUserResponse }: ChatViewProps) {
           </div>
         </div>
       ))}
+
+      {/* Streaming cursor — shown when busy and last message is a thought */}
+      {isBusy && messages.length > 0 && messages[messages.length - 1].type === "thought" && (
+        <div className="flex items-center gap-1 px-2 py-1">
+          <div
+            className="w-1.5 h-4 rounded-sm"
+            style={{
+              backgroundColor: "var(--accent-color, #3DAEE9)",
+              animation: "pulse 0.8s ease-in-out infinite",
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
