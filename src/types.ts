@@ -2,7 +2,6 @@
  * src/types.ts — Core type definitions for AI Agent Panel.
  *
  * Mirrors the QML message/agent types used in SidePanelWindow.qml.
- * Each type has a 1:1 mapping with the QML property system.
  */
 
 // ── Agent status ──
@@ -16,6 +15,8 @@ export type AgentStatus =
 
 // ── Message types (color-coded, matching QML ChatView) ──
 export type MessageType =
+  | "user"          // user messages (right-aligned bubble)
+  | "agent"         // agent text responses (left-aligned bubble)
   | "thought"       // default text color
   | "tool_call"     // amber #EF9F27
   | "tool_result"   // teal #1D9E75
@@ -32,6 +33,7 @@ export interface ChatMessage {
   options?: string[];
   iteration?: string;
   streaming?: boolean;
+  success?: boolean;
   timestamp: number;
 }
 
@@ -48,15 +50,10 @@ export interface FileEntry {
 
 // ── Agent state (Zustand store shape) ──
 export interface AgentState {
-  // Connection
   connected: boolean;
   status: AgentStatus;
-
-  // Chat
   messages: ChatMessage[];
   contextFiles: string[];
-
-  // File tree
   currentDir: string;
   workingDir: string;
   fileEntries: FileEntry[];
@@ -64,11 +61,8 @@ export interface AgentState {
   filterText: string;
   history: string[];
   loadingFiles: boolean;
-
-  // UI
   fileTreeOpen: boolean;
 
-  // Actions
   setConnected: (v: boolean) => void;
   setStatus: (s: AgentStatus) => void;
   addMessage: (msg: Omit<ChatMessage, "id" | "timestamp">) => void;

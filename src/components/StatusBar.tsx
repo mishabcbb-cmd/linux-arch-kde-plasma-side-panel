@@ -1,32 +1,11 @@
 /**
- * src/components/StatusBar.tsx — Bottom status bar for the AI Agent panel.
+ * src/components/StatusBar.tsx — Bottom toolbar.
  *
- * React equivalent of StatusBar.qml.
- * Shows: connection status with label, action buttons with tooltips.
+ * Layout reference: ai_messenger_layout_v2.html
+ * Action buttons left, iteration status right.
  */
 
 import { useAgentStore } from "../store/agentStore";
-import type { AgentStatus } from "../types";
-
-// ── Status color map (matches QML) ──
-const STATUS_COLOR: Record<AgentStatus, string> = {
-  idle: "#639922",
-  thinking: "#3DAEE9",
-  executing: "#EF9F27",
-  complete: "#639922",
-  error: "#E24B4A",
-  waiting_user: "#3DAEE9",
-};
-
-// ── Status label map (matches QML) ──
-const STATUS_LABEL: Record<AgentStatus, string> = {
-  idle: "Ready",
-  thinking: "Thinking...",
-  executing: "Working...",
-  complete: "Complete",
-  error: "Error",
-  waiting_user: "Waiting...",
-};
 
 interface StatusBarProps {
   onStop: () => void;
@@ -37,95 +16,66 @@ interface StatusBarProps {
 export default function StatusBar({ onStop, onClear, onToggleFileTree }: StatusBarProps) {
   const status = useAgentStore((s) => s.status);
   const connected = useAgentStore((s) => s.connected);
-
+  const messages = useAgentStore((s) => s.messages);
   const isBusy = status === "thinking" || status === "executing";
 
+  // Count tool calls and iterations from messages
+  const toolCalls = messages.filter((m) => m.type === "tool_call" || m.type === "tool_result").length;
+  const iterations = messages.filter((m) => m.type === "tool_call" && m.iteration).map((m) => m.iteration);
+  const maxIteration = iterations.length > 0 ? Math.max(...iterations.map(Number)) : 0;
+
   return (
-    <div
-      className="flex items-center gap-1 px-2 py-1 border-t flex-shrink-0"
-      style={{
-        borderColor: "var(--border-color, rgba(255,255,255,0.1))",
-        backgroundColor: "var(--bg-header, #2a2e32)",
-        height: "2.25rem",
-      }}
-    >
-      {/* Connection status — single indicator with dot + label */}
-      <div
-        className="flex items-center gap-1.5 px-2"
-        title={connected ? "Agent connected" : "Agent disconnected"}
-      >
-        <div
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{
-            backgroundColor: connected ? STATUS_COLOR[status] : "#E24B4A",
-            animation: isBusy ? "pulse 1s ease-in-out infinite" : "none",
-            opacity: connected ? 1 : 0.4,
-          }}
-        />
-        <span
-          className="text-xs"
-          style={{ color: "var(--text-disabled, #7f8c8d)" }}
-        >
-          {connected ? STATUS_LABEL[status] : "Disconnected"}
-        </span>
-      </div>
-
-      {/* Separator */}
-      <div
-        className="w-px h-4 mx-1"
-        style={{ backgroundColor: "var(--border-color, rgba(255,255,255,0.1))" }}
-      />
-
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Action buttons — right-aligned with consistent sizing */}
-      <div className="flex items-center gap-0.5">
+    <div className="toolbar">
+      <div className="toolbar-left">
         <button
           onClick={onStop}
           disabled={!isBusy}
-          className="p-1.5 rounded transition-colors disabled:opacity-20 hover:bg-white/5"
-          style={{ color: isBusy ? "#E24B4A" : "var(--text-disabled)" }}
-          title="Stop Task"
+          className="tool-btn"
+          aria-label="Stop"
+          title="Stop"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <rect x="6" y="6" width="12" height="12" rx="1" />
           </svg>
         </button>
-
-        <button
-          onClick={onClear}
-          className="p-1.5 rounded transition-colors hover:bg-white/5"
-          style={{ color: "var(--text-secondary)" }}
-          title="Clear Chat"
-        >
+        <button onClick={onClear} className="tool-btn" aria-label="Clear" title="Clear">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 6 5 6 21 6" />
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
         </button>
-
-        <button
-          className="p-1.5 rounded transition-colors hover:bg-white/5"
-          style={{ color: "var(--text-secondary)" }}
-          title="Terminal"
-        >
+        <button className="tool-btn" aria-label="Terminal" title="Terminal">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="4 17 10 11 4 5" />
             <line x1="12" y1="19" x2="20" y2="19" />
           </svg>
         </button>
-
-        <button
-          onClick={onToggleFileTree}
-          className="p-1.5 rounded transition-colors hover:bg-white/5"
-          style={{ color: "var(--text-secondary)" }}
-          title="Context Files"
-        >
+        <button onClick={onToggleFileTree} className="tool-btn" aria-label="Files" title="Files">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
         </button>
+      </div>
+      <div className="status-bar">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
+          <rect x="9" y="9" width="6" height="6" />
+          <line x1="9" y1="1" x2="9" y2="4" />
+          <line x1="15" y1="1" x2="15" y2="4" />
+          <line x1="9" y1="20" x2="9" y2="23" />
+          <line x1="15" y1="20" x2="15" y2="23" />
+          <line x1="20" y1="9" x2="23" y2="9" />
+          <line x1="20" y1="14" x2="23" y2="14" />
+          <line x1="1" y1="9" x2="4" y2="9" />
+          <line x1="1" y1="14" x2="4" y2="14" />
+        </svg>
+        <span>
+          {connected
+            ? isBusy
+              ? `iteration ${maxIteration || 1} · ${toolCalls} tool calls`
+              : "ready"
+            : "disconnected"}
+        </span>
       </div>
     </div>
   );
