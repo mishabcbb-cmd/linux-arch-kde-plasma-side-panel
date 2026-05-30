@@ -5,11 +5,15 @@
 
 [![Status](https://img.shields.io/badge/status-stable-green)](https://github.com/kde-ai-agent/kde-ai-agent)
 [![KDE Plasma](https://img.shields.io/badge/KDE%20Plasma-6-blue)](https://kde.org/plasma-desktop/)
+[![Tauri](https://img.shields.io/badge/Tauri-2-black)](https://tauri.app/)
+[![React](https://img.shields.io/badge/React-19-61DAFB)](https://react.dev/)
+[![Rust](https://img.shields.io/badge/Rust-1.95-orange)](https://www.rust-lang.org/)
 [![Python](https://img.shields.io/badge/Python-3.14-green)](https://www.python.org/)
 [![GCC](https://img.shields.io/badge/GCC-16-orange)](https://gcc.gnu.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-86%20passed-brightgreen)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-purple)](https://modelcontextprotocol.io/)
+[![A2A](https://img.shields.io/badge/A2A%20Hub-active-ff6b6b)](a2a_hub/)
 
 ---
 
@@ -41,7 +45,9 @@
 - **RAG-движок** — ChromaDB с семантическим поиском по кодовой базе, памяти и документации
 - **C++ Native слой** — GCC 16, pybind11, LTO thin, PGO для максимальной производительности
 - **Кросс-репозиторный интеллект** — поиск и трассировка кода через 10+ индексированных проектов
+- **Tauri 2 UI** — Messenger-style интерфейс на React 19 + TypeScript с Rust backend
 - **Web UI** — FastAPI + HTMX для headless/Docker режима
+- **A2A Hub** — Мульти-агентная оркестрация (4 агента: owl-coder, owl-researcher, qwen-reviewer, owl-commander)
 
 Проект вдохновлён лучшими практиками из [Aider](https://github.com/Aider-AI/aider), [OpenCode](https://github.com/opencode-ai/opencode), [JARVIS](https://github.com/novik133/jarvis), [end4](https://github.com/end-4/dots-hyprland) и [ZooCode/Roo Code](https://github.com/RooVetGit/Roo-Code).
 
@@ -361,13 +367,13 @@ linux-arch-kde-plasma-side-panel/
 │   ├── main.py                     # D-Bus сервис, точка входа
 │   ├── agent_loop.py               # ReAct цикл + MCP роутинг
 │   ├── tools.py                    # 12 реализаций инструментов
-│   ├── llm_client.py               # 4 провайдера LLM
+│   ├── llm_client.py               # 5 провайдеров LLM
 │   ├── context_manager.py          # Управление токен-бюджетом
 │   ├── mcp_server.py               # MCP сервер (stdio + SSE)
 │   ├── mcp_client.py               # MCP клиент (динамические серверы)
 │   ├── rag.py                      # RAG движок (ChromaDB)
 │   └── requirements.txt
-├── src/                            # C++ native слой
+├── src/                            # React frontend (Tauri)
 │   ├── rag_native.h                # Заголовок: cosine, normalize, chunk
 │   ├── embedding.cpp               # Быстрые операции с эмбеддингами
 │   ├── tokenizer.cpp               # UTF-8 подсчёт токенов + чанкование
@@ -400,6 +406,22 @@ linux-arch-kde-plasma-side-panel/
 ├── README.md                       # Этот файл
 └── PROJECT_STATE.md                # Состояние проекта
 ```
+
+### Сборка Tauri 2 (React + Rust)
+
+```bash
+# Собрать фронтенд + запустить Tauri (без Vite dev server)
+pnpm tauri:dev:build
+
+# Или по шагам:
+pnpm build                              # Собрать React frontend → dist/
+cd src-tauri && cargo run --no-default-features   # Запустить Tauri
+
+# Production билд
+cd src-tauri && cargo tauri build
+```
+
+**Важно**: приложение загружает фронтенд из `dist/` напрямую, без Vite dev server и без localhost.
 
 ### Сборка C++ Native слоя
 
@@ -515,7 +537,26 @@ python -m agent.main --mcp-sse
 | **M3 — Cross-repo AI** | ✅ Завершён | Cross-repo search + trace |
 | **M4 — Extended Features** | ✅ Завершён | Voice, Monitoring, TTS |
 
-### Phase 4 — Enterprise & Performance (Планируется)
+### Phase 4 — Tauri 2 Integration & Hybrid UI ✅ COMPLETE
+
+| Милстоун | Статус | Описание |
+|----------|--------|----------|
+| **M1 — Tauri Scaffolding** | ✅ Done | Cargo.toml, lib.rs, commands.rs, 5 plugins |
+| **M2 — React Frontend** | ✅ Done | App.tsx, Zustand store, 4 components |
+| **M3 — D-Bus Bridge** | ✅ Done | dbus_listener.rs, commands.rs |
+| **M4 — LayerShell** | ✅ Done | wayland-client implementation |
+| **M5 — Testing & Polish** | ✅ Done | Build, test on Wayland, fix issues |
+
+### Phase 4.5 — UI/UX Overhaul & Messenger Layout ✅ COMPLETE
+
+| Милстоун | Статус | Описание |
+|----------|--------|----------|
+| **M1 — Layout Rewrite** | ✅ Done | Header, chat flex:1, input, toolbar per v2 reference |
+| **M2 — Message Bubbles** | ✅ Done | User/agent bubbles, tool cards, collapsible reasoning |
+| **M3 — Tauri Dev Fix** | ✅ Done | Removed devUrl, cargo run --no-default-features |
+| **M4 — Codebase Index** | ✅ Done | Full index: 2918 nodes, 5021 edges |
+
+### Phase 5 — Enterprise & Performance (Планируется)
 
 | Милстоун | Приоритет | Описание |
 |----------|-----------|----------|

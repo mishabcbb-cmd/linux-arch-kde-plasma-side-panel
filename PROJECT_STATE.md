@@ -1,10 +1,10 @@
 # KDE AI Agent Panel — Project State
 
-**Version**: 4.1.3
-**Date**: 2026-05-28
+**Version**: 4.2.0
+**Date**: 2026-05-30
 **Arch**: Arch Linux · KDE Plasma 6 · Python 3.14 · GCC 16.1.1 · Rust 1.95.0
-**Phase**: 4 — Tauri 2 Integration & Hybrid UI (Complete)
-**Previous**: Phase 3 — Plasma Integration & Hardening (Complete)
+**Phase**: 4.5 — UI/UX Overhaul & Messenger Layout (Complete)
+**Previous**: Phase 4 — Tauri 2 Integration & Hybrid UI (Complete)
 
 ## A2A Hub — Multi-Agent Orchestration Layer
 
@@ -377,22 +377,24 @@ pnpm build
 | `mcp-configurator` | 307 | 352 |
 | `multi-game-ai-cheats` | 720 | 1030 |
 
-### 7.2 Lean-ctx
+### 7.2 Codebase Memory
 
 | Metric | Value |
 |--------|-------|
-| Files indexed | 31 |
-| Symbols | 358 |
-| Edges | 35 |
-| Tokens indexed | 58,237 |
-| Last scan | 2026-05-26 23:30 |
+| Nodes | 2,918 |
+| Edges | 5,021 |
+| Files | 166 |
+| Functions | 113 |
+| Classes | 90 |
+| Methods | 413 |
+| Last index | 2026-05-30 14:08 |
 
 ### 7.3 Engram
 
 | Metric | Value |
 |--------|-------|
 | Sessions | 9 |
-| Observations | 77 |
+| Observations | 116 |
 | Projects | 1 (linux-arch-kde-plasma-side-panel) |
 
 ---
@@ -474,8 +476,27 @@ pnpm build
 
 **Known issues remaining**:
 - LayerShell not functional (needs gtk4-layer-shell or KWin native panel protocol)
-- React frontend in Tauri window not visually verified (Vite dev server runs, DevTools not opened)
 - QML SidePanel Meta+A shortcut not tested
+
+---
+
+### v4.2.0 — 2026-05-30 — UI/UX Overhaul & Messenger Layout
+
+**What**: Complete UI rewrite matching ai_messenger_layout_v2.html reference design.
+
+**Why**: Two UI audits identified critical layout issues: duplicate status indicators, misaligned close button, permanent welcome text, empty chat area, undersized input buttons, cramped status bar, no visual hierarchy.
+
+**Changes**:
+- `src/App.tsx` — New layout: header-left (status dot + title + label), header-right (settings + close icon-btn), chat flex:1, chips, input, toolbar
+- `src/components/ChatView.tsx` — Message bubbles (user right/agent left), tool cards (amber/teal/red), collapsible reasoning (brain icon + dots + chevron toggle), thinking indicator with stop button
+- `src/components/TaskInput.tsx` — Textarea + green send button side by side, files button below
+- `src/components/StatusBar.tsx` — Toolbar left (stop/clear/terminal/files), iteration status right
+- `src/styles.css` — Full rewrite (8.27KB): .panel, .header, .icon-btn, .chat flex:1, .msg, .msg-bubble, .msg-tool, .reasoning, .reasoning-toggle, .reasoning-body, .chips, .input-area, .send-btn, .toolbar, .overlay, .modal
+- `src/types.ts` — Added "user"/"agent" to MessageType, added success?: boolean to ChatMessage
+- `src-tauri/tauri.conf.json` — Removed devUrl and beforeDevCommand (no Vite dev server)
+- `package.json` — Added `tauri:dev:build` script
+
+**Verified**: User confirmed "красивый интерфейс - мне нравится"
 
 ---
 
@@ -503,4 +524,4 @@ pnpm build
 
 ---
 
-*Updated: v4.1.3 — llama.cpp crash fixed, Tauri compiles clean, agent completes tasks, Phase 4 complete · 2026-05-28*
+*Updated: v4.2.0 — UI/UX overhaul complete, messenger layout, codebase indexed (2918 nodes, 5021 edges) · 2026-05-30*

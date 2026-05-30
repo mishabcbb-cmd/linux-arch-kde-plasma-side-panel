@@ -195,7 +195,7 @@ Use standard KV cache types instead of turbo:
   --no-mmproj --port 8085 --jinja --mlock \
   -c 65536 \
   --flash-attn on --reasoning on \
-  --n-gpu-layers 40 --n-cpu-moe 32 \
+  --n-gpu-layers 36 --n-cpu-moe 32 \
   --cache-type-k q8_0 --cache-type-v q4_0 \
   --batch-size 512 --parallel 1 --ubatch-size 512 \
   --threads 6 --threads-batch 6 \
