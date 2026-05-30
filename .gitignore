@@ -36,6 +36,7 @@ build/
 .codebase-memory/
 .roo/
 .lean-ctx/
+.kilocode/
 .bash_history
 .bashrc.lean-ctx.bak
 **/node_modules/
