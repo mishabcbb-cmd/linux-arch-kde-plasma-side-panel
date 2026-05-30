@@ -54,7 +54,7 @@ agents:
     auth_type: "none"
     status: "active"
     model_name: "owl-commander"
-    api_key: "${OPENROUTER_API_KEY}"
+    api_key: "${OPENROUTER_API_KEY_3}"
 
   - name: "qwen-reviewer"
     description: "Qwen Reviewer — мелкие задачи: форматтинг, линтинг, простые проверки (llama.cpp/Qwen3.6-35B, 8GB VRAM)"

@@ -7,9 +7,9 @@ Requires=a2a-hub@%i.service
 Type=forking
 User=%I
 WorkingDirectory=/home/%I/ecosystem/linux-arch-kde-plasma-side-panel
-Environment="OPENROUTER_API_KEY_1=${OPENROUTER_API_KEY}"
-Environment="OPENROUTER_API_KEY_2=${OPENROUTER_API_KEY}"
-Environment="OPENROUTER_API_KEY_3=${OPENROUTER_API_KEY}"
+Environment="OPENROUTER_API_KEY_1=${OPENROUTER_API_KEY_1}"
+Environment="OPENROUTER_API_KEY_2=${OPENROUTER_API_KEY_2}"
+Environment="OPENROUTER_API_KEY_3=${OPENROUTER_API_KEY_3}"
 ExecStart=/bin/bash -c '\
   nohup python a2a_hub/llm_agent/agent_server.py --name owl-coder --provider openrouter --model "openrouter/owl-alpha" --port 8091 --hub-url http://127.0.0.1:9000 --capabilities code_analysis code_generation debugging refactoring architecture complex_reasoning --api-key "$OPENROUTER_API_KEY_1" > /tmp/owl-coder.log 2>&1 & \
   nohup python a2a_hub/llm_agent/agent_server.py --name owl-researcher --provider openrouter --model "openrouter/owl-alpha" --port 8092 --hub-url http://127.0.0.1:9000 --capabilities web_search summarization fact_checking research documentation --api-key "$OPENROUTER_API_KEY_2" > /tmp/owl-researcher.log 2>&1 & \
