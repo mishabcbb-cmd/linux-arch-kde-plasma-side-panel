@@ -382,7 +382,7 @@ class OllamaProvider(BaseLLMProvider):
         messages: List[Message],
         tools: Optional[List[Dict[str, Any]]] = None,
         system_prompt: Optional[str] = None,
-        stream: bool = True,
+        stream: bool = False,
     ) -> Dict[str, Any]:
         sp = system_prompt or self._system_prompt
         body: Dict[str, Any] = {
@@ -590,15 +590,33 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         messages: List[Message],
         tools: Optional[List[Dict[str, Any]]] = None,
         system_prompt: Optional[str] = None,
-        stream: bool = True,
+        stream: bool = False,
     ) -> Dict[str, Any]:
         sp = system_prompt or self._system_prompt
+        # Сериализуем сообщения сохраняя tool_calls и tool_call_id
+        serialized_messages = []
+        for m in messages:
+            entry: Dict[str, Any] = {"role": m.role}
+            if m.content:
+                entry["content"] = m.content
+            if m.tool_calls:
+                entry["tool_calls"] = m.tool_calls
+            if m.tool_call_id:
+                entry["tool_call_id"] = m.tool_call_id
+            if m.name:
+                entry["name"] = m.name
+            # Для tool сообщений content может быть пустым
+            if m.role == "tool" and not m.content:
+                entry["content"] = ""
+            serialized_messages.append(entry)
+
         body: Dict[str, Any] = {
             "model": self.model,
-            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "messages": serialized_messages,
             "stream": stream,
             "temperature": self.temperature,
             "max_tokens": self.config.get("max_tokens", 8192),
+            "provider": {"allow_fallbacks": False, "data_collection": "allow"},
         }
         if sp:
             body["messages"].insert(0, {"role": "system", "content": sp})

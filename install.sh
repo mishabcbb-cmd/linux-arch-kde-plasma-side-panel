@@ -174,7 +174,61 @@ else
     echo_ok "Config already exists at $CONFIG_DIR/config.json"
 fi
 
-# ── Step 6: Setup Instructions ───────────────────
+# ── Step 6: NVIDIA Wayland Setup ──────────────────
+echo_info "Step 6/6: Checking NVIDIA Wayland configuration..."
+
+# Check if NVIDIA GPU is present
+if lspci 2>/dev/null | grep -qi "nvidia"; then
+    echo_info "NVIDIA GPU detected — configuring Wayland env..."
+
+    # Check if libva-nvidia-driver is installed
+    if ! pacman -Qi libva-nvidia-driver &>/dev/null; then
+        echo_warn "libva-nvidia-driver not found. Installing..."
+        sudo pacman -S --noconfirm libva-nvidia-driver 2>/dev/null || \
+            echo_warn "Failed to install libva-nvidia-driver. Install manually: sudo pacman -S libva-nvidia-driver"
+    fi
+
+    # KEY FIX: GSK_RENDERER=ngl — forces GTK4 OpenGL renderer instead of DMA-BUF
+    # Without this, Tauri/GTK4 crashes with "Error 71 (Protocol error)" on NVIDIA
+    if [ ! -f "$HOME/.config/environment.d/gsk.conf" ]; then
+        mkdir -p "$HOME/.config/environment.d"
+        echo 'GSK_RENDERER=ngl' > "$HOME/.config/environment.d/gsk.conf"
+        echo_ok "Created ~/.config/environment.d/gsk.conf (GSK_RENDERER=ngl)"
+    else
+        echo_ok "gsk.conf already exists"
+    fi
+
+    # Add NVIDIA Wayland env vars to /etc/environment if not present
+    if ! grep -q "GSK_RENDERER" /etc/environment 2>/dev/null; then
+        echo 'GSK_RENDERER=ngl' | sudo tee -a /etc/environment > /dev/null
+        echo_ok "Added GSK_RENDERER=ngl to /etc/environment"
+    else
+        echo_ok "GSK_RENDERER already in /etc/environment"
+    fi
+
+    if ! grep -q "NVD_BACKEND" /etc/environment 2>/dev/null; then
+        echo 'NVD_BACKEND=direct' | sudo tee -a /etc/environment > /dev/null
+        echo_ok "Added NVD_BACKEND=direct to /etc/environment"
+    else
+        echo_ok "NVD_BACKEND already in /etc/environment"
+    fi
+
+    if ! grep -q "GDK_BACKEND=wayland" /etc/environment 2>/dev/null; then
+        echo 'GDK_BACKEND=wayland' | sudo tee -a /etc/environment > /dev/null
+        echo_ok "Added GDK_BACKEND=wayland to /etc/environment"
+    else
+        echo_ok "GDK_BACKEND already in /etc/environment"
+    fi
+
+    echo_ok "NVIDIA Wayland setup complete"
+    echo ""
+    echo_info "NOTE: Log out and back in for environment.d changes to take effect."
+    echo_info "Or run immediately: export GSK_RENDERER=ngl NVD_BACKEND=direct GDK_BACKEND=wayland"
+else
+    echo_ok "No NVIDIA GPU detected — skipping NVIDIA Wayland setup"
+fi
+
+# ── Step 7: Setup Instructions ───────────────────
 echo ""
 echo "================================================"
 echo "  Installation Complete!"
@@ -198,6 +252,9 @@ echo "  4. If using Ollama, install and start it:"
 echo "     pacman -S ollama"
 echo "     systemctl --user enable --now ollama"
 echo "     ollama pull llama3.2"
+echo ""
+echo "  5. Launch Tauri with Wayland support:"
+echo "     ./scripts/tauri-wayland.sh"
 echo ""
 echo "  Service: systemctl --user status kde-ai-agent"
 echo "  Logs:    journalctl --user -u kde-ai-agent -f"

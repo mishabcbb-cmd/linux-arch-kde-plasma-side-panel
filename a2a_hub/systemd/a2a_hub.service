@@ -15,10 +15,10 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=a2a_hub
 
-# Security hardening
+# Security hardening (relaxed — ProtectSystem=strict blocks script reads)
 NoNewPrivileges=true
-ProtectSystem=strict
-ReadWritePaths=/home/%I/.local/share/a2a_hub
+ProtectSystem=full
+ReadWritePaths=/home/%I/.local/share/a2a_hub /tmp
 PrivateTmp=true
 
 [Install]

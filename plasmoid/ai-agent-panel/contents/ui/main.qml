@@ -1,19 +1,10 @@
 /*
- * contents/ui/main.qml — Root plasmoid item for the AI Agent Panel.
+ * contents/ui/main.qml — AI Agent Panel plasmoid.
  *
- * Pattern: AppGrid's GridWindow — creates a standalone Window as a child
- * component, avoiding Wayland GLib re-entrancy issues from PyQt6.
+ * Pattern: AppGrid — compact representation (tray icon) toggles
+ * a standalone SidePanelWindow with slide animation.
  *
- * The window is positioned on the left screen edge, frameless, using
- * LayerShellQt (Wayland) via QML attached properties for proper
- * compositor integration — no C++ plugin needed.
- *
- * Toggle via Plasma shortcut (Meta+A) or panel icon click.
- *
- * D-Bus integration:
- *   • dbusCall — calls agent methods via dbus_helper.py (executable engine)
- *   • Signals received by SidePanelWindow's dbusListener (executable engine
- *     running dbus_listener.py as subprocess)
+ * Toggle via Plasma shortcut (Meta+A) or tray icon click.
  */
 
 import QtQuick
@@ -52,7 +43,7 @@ PlasmoidItem {
         function onActivated() { kicker.toggleWindow() }
     }
 
-    // ── Compact representation (panel icon) ──
+    // ── Compact representation (tray icon) ──
     Component {
         id: compactRepresentationComponent
         PlasmaComponents.Button {
@@ -68,8 +59,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Side panel window component (loaded from file) ──
-    // SidePanelWindow is a QML file, not a registered type — use Qt.createComponent
+    // ── Side panel window component ──
     property var sideWindowComponent: null
 
     // ── Toggle window ──
@@ -113,32 +103,5 @@ PlasmoidItem {
         if (sideWindow) {
             sideWindow.hidePanel()
         }
-    }
-
-    // ── D-Bus method call helper (used for initial status check) ──
-    Plasma5Support.DataSource {
-        id: dbusCall
-        engine: "executable"
-        onNewData: function(sourceName, data) {
-            if (data.status === "complete") {
-                var output = (data.output || "").trim()
-                if (output.startsWith("STATUS:")) {
-                    try {
-                        var statusData = JSON.parse(output.substring(7).trim())
-                        kicker.agentStatus = statusData.status || "idle"
-                    } catch(e) {}
-                }
-            }
-        }
-    }
-
-    // ── Refresh agent status on plasmoid ready ──
-    Component.onCompleted: {
-        // Check agent status via dbus_helper.py
-        var helperPath = Qt.resolvedUrl("dbus_helper.py")
-        if (helperPath.toString().startsWith("file://")) {
-            helperPath = helperPath.toString().substring(7)
-        }
-        dbusCall.connectSource("python3", [helperPath, "get_status"])
     }
 }

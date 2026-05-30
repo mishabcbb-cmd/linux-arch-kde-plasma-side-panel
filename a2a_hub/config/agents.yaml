@@ -1,5 +1,5 @@
 # A2A Hub — Agent Registry Configuration
-# 3 агента: 2x OWL (OpenRouter) + 1x Qwen (llama.cpp, 8GB VRAM — мелкие задачи)
+# 4 агента: 3x OWL (OpenRouter) + 1x Qwen (llama.cpp, 8GB VRAM — мелкие задачи)
 
 hub:
   host: "127.0.0.1"
@@ -23,6 +23,7 @@ agents:
       - "complex_reasoning"
     auth_type: "none"
     status: "active"
+    model_name: "owl-coder"
 
   - name: "owl-researcher"
     description: "OWL Researcher — исследования, суммаризация, поиск (OpenRouter/owl-alpha)"
@@ -37,6 +38,23 @@ agents:
       - "documentation"
     auth_type: "none"
     status: "active"
+    model_name: "owl-researcher"
+
+  - name: "owl-commander"
+    description: "OWL Commander — оркестрация, координация агентов, декомпозиция задач (OpenRouter/owl-alpha)"
+    role: "api"
+    endpoint: "http://127.0.0.1:8094"
+    agent_card_url: "http://127.0.0.1:8094/.well-known/agent-card.json"
+    capabilities:
+      - "orchestration"
+      - "task_decomposition"
+      - "coordination"
+      - "planning"
+      - "delegation"
+    auth_type: "none"
+    status: "active"
+    model_name: "owl-commander"
+    api_key: "${OPENROUTER_API_KEY}"
 
   - name: "qwen-reviewer"
     description: "Qwen Reviewer — мелкие задачи: форматтинг, линтинг, простые проверки (llama.cpp/Qwen3.6-35B, 8GB VRAM)"
@@ -50,6 +68,7 @@ agents:
       - "linting"
     auth_type: "none"
     status: "active"
+    model_name: "qwen-reviewer"
 
 routing:
   default_strategy: "capability_based"

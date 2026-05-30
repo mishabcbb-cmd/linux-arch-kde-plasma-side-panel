@@ -1,14 +1,16 @@
 #!/bin/bash
-# A2A LLM Agents — запуск всех 3 агентов
+# A2A LLM Agents — запуск всех 4 агентов
 #
 # Требует:
 #   OPENROUTER_API_KEY_1 — для owl-coder
 #   OPENROUTER_API_KEY_2 — для owl-researcher
+#   OPENROUTER_API_KEY_3 — для owl-commander
 #   llama.cpp на localhost:8085
 #
 # Использование:
 #   export OPENROUTER_API_KEY_1="sk-or-v1-..."
 #   export OPENROUTER_API_KEY_2="sk-or-v1-..."
+#   export OPENROUTER_API_KEY_3="sk-or-v1-..."
 #   ./start_agents.sh
 
 set -e
@@ -25,6 +27,10 @@ if [ -z "$OPENROUTER_API_KEY_1" ]; then
 fi
 if [ -z "$OPENROUTER_API_KEY_2" ]; then
     echo "ERROR: OPENROUTER_API_KEY_2 not set"
+    exit 1
+fi
+if [ -z "$OPENROUTER_API_KEY_3" ]; then
+    echo "ERROR: OPENROUTER_API_KEY_3 not set"
     exit 1
 fi
 
@@ -51,6 +57,7 @@ if ! curl -s "$HUB_URL/health" > /dev/null 2>&1; then
     echo "  ✓ Hub started (PID: $HUB_PID)"
 else
     echo "  ✓ Hub already running"
+    HUB_PID=""
 fi
 
 # Agent 1: OWL Coder (OpenRouter)
@@ -81,7 +88,21 @@ python "$SCRIPT_DIR/agent_server.py" \
 RESEARCHER_PID=$!
 echo "  ✓ owl-researcher on :8092 (PID: $RESEARCHER_PID)"
 
-# Agent 3: Qwen Reviewer (llama.cpp)
+# Agent 3: OWL Commander (OpenRouter) — оркестрация и координация
+echo "Starting owl-commander (OpenRouter/owl-alpha)..."
+python "$SCRIPT_DIR/agent_server.py" \
+    --name "owl-commander" \
+    --provider openrouter \
+    --model "openrouter/owl-alpha" \
+    --port 8094 \
+    --hub-url "$HUB_URL" \
+    --capabilities orchestration task_decomposition coordination planning delegation \
+    --api-key "$OPENROUTER_API_KEY_3" \
+    > /tmp/owl-commander.log 2>&1 &
+COMMANDER_PID=$!
+echo "  ✓ owl-commander on :8094 (PID: $COMMANDER_PID)"
+
+# Agent 4: Qwen Reviewer (llama.cpp)
 echo "Starting qwen-reviewer (llama.cpp/Qwen3.6-35B)..."
 python "$SCRIPT_DIR/agent_server.py" \
     --name "qwen-reviewer" \
@@ -96,7 +117,7 @@ REVIEWER_PID=$!
 echo "  ✓ qwen-reviewer on :8093 (PID: $REVIEWER_PID)"
 
 # Сохранить PID
-echo "$HUB_PID $CODER_PID $RESEARCHER_PID $REVIEWER_PID" > /tmp/a2a-agents.pids
+echo "$HUB_PID $CODER_PID $RESEARCHER_PID $COMMANDER_PID $REVIEWER_PID" > /tmp/a2a-agents.pids
 
 sleep 2
 
@@ -104,11 +125,12 @@ echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║     All Agents Started                   ║"
 echo "╠══════════════════════════════════════════╣"
-echo "║  Hub:          http://127.0.0.1:9000     ║"
-echo "║  OWL Coder:    http://127.0.0.1:8091     ║"
-echo "║  OWL Research: http://127.0.0.1:8092     ║"
-echo "║  Qwen Review:  http://127.0.0.1:8093     ║"
+echo "║  Hub:            http://127.0.0.1:9000   ║"
+echo "║  OWL Coder:      http://127.0.0.1:8091   ║"
+echo "║  OWL Researcher: http://127.0.0.1:8092   ║"
+echo "║  OWL Commander:  http://127.0.0.1:8094   ║"
+echo "║  Qwen Reviewer:  http://127.0.0.1:8093   ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
-echo "Logs: /tmp/owl-coder.log /tmp/owl-researcher.log /tmp/qwen-reviewer.log"
+echo "Logs: /tmp/owl-coder.log /tmp/owl-researcher.log /tmp/owl-commander.log /tmp/qwen-reviewer.log"
 echo "Stop: ./stop_agents.sh"

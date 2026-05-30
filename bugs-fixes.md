@@ -1,5 +1,65 @@
 # Bugs & Fixes — KDE AI Agent Panel
 
+## 2026-05-30 — NVIDIA Wayland "Error 71 Protocol Error" Crash (Tauri)
+
+### Bug
+Tauri app crashes immediately on launch with:
+```
+Gdk-Message: Error 71 (Protocol error) dispatching to Wayland display.
+```
+Window opens then closes instantly. Happens on NVIDIA RTX 3070 + driver 595.71.05 + KWin Wayland.
+
+### Root Cause
+GTK4 uses DMA-BUF renderer by default on Wayland, which conflicts with NVIDIA's GBM implementation. The `wl_display@1: error 71` is a protocol-level error when GTK4 tries to pass DMA-BUF buffers through KWin.
+
+### Fix Applied
+**Key fix: `GSK_RENDERER=ngl`** — forces GTK4 to use OpenGL renderer instead of DMA-BUF.
+
+```bash
+# ~/.config/environment.d/gsk.conf (persistent, loaded by systemd user session)
+GSK_RENDERER=ngl
+```
+
+**Full set of env vars** (`/etc/environment`):
+```
+GSK_RENDERER=ngl          # KEY FIX — OpenGL renderer for GTK4 on NVIDIA
+NVD_BACKEND=direct        # VA-API hardware acceleration
+GDK_BACKEND=wayland       # Native Wayland (no XWayland fallback)
+```
+
+**Files changed:**
+- `/etc/environment` — added GSK_RENDERER, NVD_BACKEND, GDK_BACKEND
+- `~/.config/environment.d/gsk.conf` — GSK_RENDERER=ngl (systemd user session)
+- `scripts/tauri-wayland.sh` — updated with GSK_RENDERER=ngl as primary fix
+- `package.json` — added `tauri:wayland` script
+- `install.sh` — added Step 6/6 for automatic NVIDIA Wayland setup
+
+### Verification
+```bash
+# Check env vars
+echo $GSK_RENDERER   # should print "ngl"
+echo $NVD_BACKEND    # should print "direct"
+echo $GDK_BACKEND    # should print "wayland"
+
+# Launch Tauri with Wayland
+./scripts/tauri-wayland.sh
+# or
+pnpm tauri:wayland
+```
+
+### References
+- https://forums.opensuse.org/t/gdk-message-error-71-protocol-error-dispatching-to-wayland-display/178886
+- https://docs.gtk.org/gtk4/running.html (GSK_RENDERER env var documentation)
+
+### Notes
+- `GSK_RENDERER=ngl` is the **critical** fix — without it, Tauri crashes even with other vars set
+- `libva-nvidia-driver` 0.0.17-1 already installed
+- NVIDIA driver 595.71.05 supports syncobj protocol
+- WebKitGTK 2.52.3 has native Wayland support
+- `environment.d` config takes effect after logout/login; use `export` for immediate testing
+
+---
+
 ## 2026-05-28 — Tool Schema Format Mismatch
 
 ### Bug

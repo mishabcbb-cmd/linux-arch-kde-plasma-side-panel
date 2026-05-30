@@ -65,18 +65,38 @@ class LLMProvider:
             self._provider = create_provider_from_config(config)
         return self._provider
 
-    def send_message(self, messages: List[Dict[str, str]], system_prompt: str = "") -> str:
-        """Отправить сообщение в LLM и получить ответ."""
+    def send_message(self, messages: List[Dict[str, str]], system_prompt: str = "", tools: Optional[List[Dict]] = None) -> Any:
+        """Отправить сообщение в LLM и получить ответ. Возвращает ProviderResponse."""
         from llm_client import Message
 
-        msgs = [Message(role=m["role"], content=m["content"]) for m in messages]
+        # Конвертируем сообщения сохраняя tool_calls и tool_call_id
+        msgs = []
+        for m in messages:
+            msg = Message(role=m["role"], content=m.get("content", ""))
+            if m.get("tool_calls"):
+                msg.tool_calls = m["tool_calls"]
+            if m.get("tool_call_id"):
+                msg.tool_call_id = m["tool_call_id"]
+            if m.get("name"):
+                msg.name = m["name"]
+            msgs.append(msg)
+
         provider = self._get_provider()
 
         response = provider.send_message(
             messages=msgs,
+            tools=tools,
             system_prompt=system_prompt or self._default_system_prompt(),
         )
-        return response.content
+        # send_message uses stream=True by default, but we need non-streaming for tool calling
+        # Re-send with stream=False if we got an error
+        if response.finish_reason == "error" and "401" in (response.content or ""):
+            response = provider.send_message(
+                messages=msgs,
+                tools=tools,
+                system_prompt=system_prompt or self._default_system_prompt(),
+            )
+        return response
 
     def _default_system_prompt(self) -> str:
         return (
@@ -141,6 +161,16 @@ class AgentHTTPHandler(BaseHTTPRequestHandler):
             self._handle_execute(data)
         elif path == "/message":
             self._handle_message(data)
+        elif path == "/tools/web_search":
+            self._handle_tool_web_search(data)
+        elif path == "/tools/web_fetch":
+            self._handle_tool_web_fetch(data)
+        elif path == "/tools/memory_search":
+            self._handle_tool_memory_search(data)
+        elif path == "/tools/memory_save":
+            self._handle_tool_memory_save(data)
+        elif path == "/tools/codebase_search":
+            self._handle_tool_codebase_search(data)
         else:
             self._send_json({"error": "Not found"}, 404)
 
@@ -208,23 +238,275 @@ class AgentHTTPHandler(BaseHTTPRequestHandler):
                 "agent": self.agent_server.agent_name,
             }, 500)
 
+    def _a2a_system_prompt(self) -> str:
+        """Краткий system prompt для A2A делегирования."""
+        return (
+            f"You are '{self.agent_server.agent_name}'. "
+            f"Capabilities: {', '.join(self.agent_server.capabilities)}. "
+            "If task is outside your capabilities, use delegate_task tool. "
+            "Available agents: owl-coder (code), owl-researcher (search), "
+            "owl-commander (orchestration), qwen-reviewer (quick review)."
+        )
+
+    def _a2a_tools(self) -> List[Dict[str, Any]]:
+        """A2A tool definitions для LLM. Только delegate_task — остальные инструменты через HTTP endpoints."""
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "delegate_task",
+                    "description": "Delegate a task to another agent via the A2A Hub. Use when the task is outside your capabilities or requires specialization. You can also use this to chain: delegate to B, then B delegates to C.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "task": {
+                                "type": "string",
+                                "description": "The task description for the target agent. Be specific about what you need."
+                            },
+                            "target_agent": {
+                                "type": "string",
+                                "description": "Name of the target agent: owl-coder (code), owl-researcher (search), owl-commander (orchestration), qwen-reviewer (quick review)"
+                            },
+                            "context": {
+                                "type": "string",
+                                "description": "Additional context, background info, or constraints for the target agent"
+                            }
+                        },
+                        "required": ["task", "target_agent"]
+                    }
+                }
+            }
+        ]
+
     def _handle_message(self, data: Optional[Dict]) -> None:
-        """Простой chat — отправить сообщение в LLM."""
+        """Chat с A2A tool calling — агент может делегировать задачи другим агентам."""
         if not data or "message" not in data:
             self._send_json({"error": "Missing 'message' in request"}, 400)
             return
 
         try:
-            messages = [{"role": "user", "content": data["message"]}]
-            response = self.agent_server.llm.send_message(
-                messages=messages,
-                system_prompt=data.get("system_prompt", ""),
-            )
-            self._send_json({
-                "response": response,
+            user_message = data["message"]
+            system_prompt = data.get("system_prompt", "") or self._a2a_system_prompt()
+            # Убираем tools для уменьшения размера промпта (экономия токенов)
+            # Tools доступны через HTTP endpoints агента
+            tools = None
+            task_id = data.get("task_id", "")
+
+            # Цикл tool calling (макс 5 итераций чтобы избежать бесконечного цикла)
+            messages = [{"role": "user", "content": user_message}]
+            final_response = ""
+            delegation_chain = []
+
+            for iteration in range(5):
+                # Отправить в LLM с tools
+                from llm_client import Message
+                msgs = [Message(role=m["role"], content=m["content"]) for m in messages]
+                provider = self.agent_server.llm._get_provider()
+                response = provider.send_message(
+                    messages=msgs,
+                    tools=tools,
+                    system_prompt=system_prompt,
+                )
+
+                # Проверить есть ли tool_calls
+                if not response.tool_calls:
+                    # Финальный ответ — нет tool calls
+                    final_response = response.content
+                    break
+
+                # Обработать tool calls
+                tool_results = []
+                for tc in response.tool_calls:
+                    func_name = tc.get("function", {}).get("name", "")
+                    func_args_str = tc.get("function", {}).get("arguments", "{}")
+                    try:
+                        func_args = json.loads(func_args_str)
+                    except json.JSONDecodeError:
+                        func_args = {}
+
+                    # Вызвать соответствующий tool
+                    tool_result = self._execute_tool(func_name, func_args, task_id)
+                    tool_results.append({
+                        "tool_call_id": tc.get("id", ""),
+                        "role": "tool",
+                        "name": func_name,
+                        "content": json.dumps(tool_result, ensure_ascii=False)[:2000],
+                    })
+
+                    # Отследить делегацию
+                    if func_name == "delegate_task":
+                        delegation_chain.append({
+                            "from": self.agent_server.agent_name,
+                            "to": func_args.get("target_agent", "unknown"),
+                            "task": func_args.get("task", "")[:100],
+                        })
+
+                # Добавить assistant message с tool_calls и tool results
+                messages.append({
+                    "role": "assistant",
+                    "content": response.content or "",
+                    "tool_calls": response.tool_calls,
+                })
+                for tr in tool_results:
+                    messages.append(tr)
+
+            # Если цикл завершился без финального ответа
+            if not final_response:
+                final_response = messages[-1].get("content", "Task completed via delegation.")
+
+            result = {
+                "response": final_response,
                 "agent": self.agent_server.agent_name,
                 "model": self.agent_server.model,
-            })
+                "delegation_chain": delegation_chain,
+            }
+
+            # Сохранить в conversation log
+            if self.agent_server.hub_client:
+                if not task_id:
+                    import uuid as _uuid
+                    task_id = f"chat-{_uuid.uuid4().hex[:8]}"
+                self.agent_server.hub_client._post_conversation_message(
+                    task_id=task_id, role="user",
+                    content=user_message[:500], agent="user"
+                )
+                self.agent_server.hub_client._post_conversation_message(
+                    task_id=task_id, role="assistant",
+                    content=final_response[:2000],
+                    agent=self.agent_server.agent_name,
+                    metadata={"model": self.agent_server.model, "delegations": delegation_chain}
+                )
+
+            self._send_json(result)
+        except Exception as e:
+            logger.error(f"A2A message error: {e}", exc_info=True)
+            self._send_json({"error": str(e)}, 500)
+
+    def _execute_tool(self, tool_name: str, args: Dict[str, Any], task_id: str) -> Any:
+        """Вызвать A2A tool и вернуть результат."""
+        if tool_name == "delegate_task":
+            return self._tool_delegate(args, task_id)
+        else:
+            return {"error": f"Unknown tool: {tool_name}. Available: delegate_task"}
+
+    def _tool_delegate(self, args: Dict[str, Any], task_id: str) -> Dict[str, Any]:
+        """Делегировать задачу другому агенту через Hub."""
+        target = args.get("target_agent", "")
+        task = args.get("task", "")
+        context = args.get("context", "")
+
+        if not self.agent_server.hub_client:
+            return {"error": "No Hub connection"}
+
+        try:
+            full_task = task
+            if context:
+                full_task = f"{task}\n\nContext: {context}"
+
+            result = self.agent_server.hub_client.delegate_task(
+                text=full_task,
+                target_agent=target,
+                context={"delegated_by": self.agent_server.agent_name, "original_task_id": task_id},
+            )
+            return {
+                "status": "delegated",
+                "target_agent": target,
+                "result": result,
+            }
+        except Exception as e:
+            return {"error": f"Delegation failed: {e}"}
+
+    # --- Tool Handlers ---
+
+    def _handle_tool_web_search(self, data: Optional[Dict]) -> None:
+        """Поиск через SearXNG HTTP API."""
+        if not data or "query" not in data:
+            self._send_json({"error": "Missing 'query'"}, 400)
+            return
+        try:
+            import httpx
+            params = {"q": data["query"], "format": "json"}
+            if data.get("language"):
+                params["language"] = data["language"]
+            if data.get("time_range"):
+                params["time_range"] = data["time_range"]
+            resp = httpx.get("http://127.0.0.1:8888/search", params=params, timeout=30)
+            results = resp.json().get("results", [])[:10]
+            self._send_json({"results": [
+                {"title": r.get("title",""), "url": r.get("url",""), "snippet": r.get("content","")[:300]}
+                for r in results
+            ]})
+        except Exception as e:
+            self._send_json({"error": str(e)}, 500)
+
+    def _handle_tool_web_fetch(self, data: Optional[Dict]) -> None:
+        """Получить содержимое веб-страницы."""
+        if not data or "url" not in data:
+            self._send_json({"error": "Missing 'url'"}, 400)
+            return
+        try:
+            import httpx
+            max_len = data.get("max_length", 5000)
+            resp = httpx.get(data["url"], timeout=30, follow_redirects=True)
+            self._send_json({"url": data["url"], "status": resp.status_code, "content": resp.text[:max_len]})
+        except Exception as e:
+            self._send_json({"error": str(e)}, 500)
+
+    def _handle_tool_memory_search(self, data: Optional[Dict]) -> None:
+        """Поиск в engram памяти через CLI."""
+        if not data or "query" not in data:
+            self._send_json({"error": "Missing 'query'"}, 400)
+            return
+        try:
+            import subprocess
+            query = data["query"].replace('"', '\\"')
+            limit = data.get("limit", 10)
+            result = subprocess.run(
+                ["engram", "search", query, "--limit", str(limit), "--project", "linux-arch-kde-plasma-side-panel"],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode == 0:
+                self._send_json({"results": result.stdout.strip()})
+            else:
+                self._send_json({"error": result.stderr}, 500)
+        except Exception as e:
+            self._send_json({"error": str(e)}, 500)
+
+    def _handle_tool_memory_save(self, data: Optional[Dict]) -> None:
+        """Сохранить в engram память через CLI."""
+        if not data or "title" not in data or "content" not in data:
+            self._send_json({"error": "Missing 'title' or 'content'"}, 400)
+            return
+        try:
+            import subprocess
+            title = data["title"]
+            content = data["content"]
+            mem_type = data.get("type", "manual")
+            result = subprocess.run(
+                ["engram", "save", title, content, "--type", mem_type, "--project", "linux-arch-kde-plasma-side-panel"],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode == 0:
+                self._send_json({"status": "saved", "result": result.stdout.strip()})
+            else:
+                self._send_json({"error": result.stderr}, 500)
+        except Exception as e:
+            self._send_json({"error": str(e)}, 500)
+
+    def _handle_tool_codebase_search(self, data: Optional[Dict]) -> None:
+        """Поиск по кодовой базе через grep."""
+        if not data or "query" not in data:
+            self._send_json({"error": "Missing 'query'"}, 400)
+            return
+        try:
+            import subprocess
+            query = data["query"]
+            file_pattern = data.get("file_pattern", "*")
+            limit = data.get("limit", 10)
+            cmd = f'cd {_project_root} && grep -r -n --include="{file_pattern}" -m {limit} "{query}" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=build --exclude-dir=.venv 2>/dev/null | head -{limit}'
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=15)
+            lines = result.stdout.strip().split("\n") if result.stdout.strip() else []
+            self._send_json({"results": [{"line": l} for l in lines[:limit]]})
         except Exception as e:
             self._send_json({"error": str(e)}, 500)
 

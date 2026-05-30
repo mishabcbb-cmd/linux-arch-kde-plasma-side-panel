@@ -29,7 +29,6 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as Plasma5Support
-import org.kde.layershell 1.0
 
 Window {
     id: root
@@ -52,17 +51,9 @@ Window {
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
     title: "AI Agent Panel"
 
-    // ── Wayland LayerShell (attached type — NOT a child component!) ──
-    // LayerShellQt::Window is an attached type (isCreatable: false in qmltypes).
-    // Import: org.kde.layershell 1.0 → attached type is Window
-    Window.anchors: Window.AnchorLeft
-                    | Window.AnchorTop
-                    | Window.AnchorBottom
-    Window.layer: Window.LayerOverlay
-    Window.keyboardInteractivity: Window.KeyboardInteractivityOnDemand
-    Window.scope: "ai-agent-panel"
-    Window.exclusionZone: 0  // Don't reserve space in panel
-    Window.margins: { left: 0; top: 0; bottom: 0; right: 0 }
+    // ── LayerShell configuration via C++ plugin ──
+    // Plasmoid.configureWindow() is called from main.qml after window creation.
+    // The C++ plugin (AiAgentPlugin) sets up LayerShellQt for Wayland.
 
     // ── Slide animation (opacity-based — x animation doesn't work on Wayland) ──
     property bool panelVisible: false

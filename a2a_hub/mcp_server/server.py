@@ -173,6 +173,193 @@ class A2AMCPServer:
                     },
                 },
             },
+            # --- External Tools ---
+            {
+                "name": "web_search",
+                "description": "Поиск в интернете через SearXNG. Найди актуальную информацию, документацию, примеры кода.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Поисковый запрос",
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Код языка (en, ru, de). По умолчанию 'all'.",
+                            "default": "all",
+                        },
+                        "time_range": {
+                            "type": "string",
+                            "description": "Временной диапазон: day, month, year",
+                            "default": "",
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
+                "name": "web_fetch",
+                "description": "Получить содержимое веб-страницы по URL. Извлекает текст, сохраняя структуру.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "URL страницы",
+                        },
+                        "max_length": {
+                            "type": "integer",
+                            "description": "Максимум символов (по умолчанию 5000)",
+                            "default": 5000,
+                        },
+                        "section": {
+                            "type": "string",
+                            "description": "Извлечь только текст под указанным заголовком",
+                            "default": "",
+                        },
+                    },
+                    "required": ["url"],
+                },
+            },
+            {
+                "name": "memory_save",
+                "description": "Сохранить важное наблюдение в постоянную память (engram). Используй после значимых открытий, решений, исправлений.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Короткий заголовок (например 'Fixed auth bug')",
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Структурированный контент: **What**, **Why**, **Where**, **Learned**",
+                        },
+                        "type": {
+                            "type": "string",
+                            "description": "Тип: decision, architecture, bugfix, pattern, config, discovery, learning",
+                            "default": "manual",
+                        },
+                    },
+                    "required": ["title", "content"],
+                },
+            },
+            {
+                "name": "memory_search",
+                "description": "Поиск в постоянной памяти (engram). Найди прошлые решения, исправления, паттерны.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Поисковый запрос или ключевые слова",
+                        },
+                        "type": {
+                            "type": "string",
+                            "description": "Фильтр по типу: decision, architecture, bugfix, pattern, config, discovery",
+                            "default": "",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Максимум результатов",
+                            "default": 10,
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
+                "name": "codebase_search",
+                "description": "Поиск по кодовой базе проекта через граф знаний. Найди функции, классы, определения.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Поисковый запрос (например 'update settings', 'auth middleware')",
+                        },
+                        "file_pattern": {
+                            "type": "string",
+                            "description": "Glob паттерн для фильтрации файлов (например '*.py', '*.ts')",
+                            "default": "*",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Максимум результатов",
+                            "default": 10,
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
+                "name": "codebase_trace",
+                "description": "Трассировка вызовов или потока данных через граф кода. Покажи кто вызывает функцию или как данные распространяются.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "function_name": {
+                            "type": "string",
+                            "description": "Имя функции для трассировки",
+                        },
+                        "direction": {
+                            "type": "string",
+                            "description": "Направление: inbound (кто вызывает), outbound (кого вызывает), both",
+                            "default": "both",
+                        },
+                        "depth": {
+                            "type": "integer",
+                            "description": "Глубина трассировки",
+                            "default": 3,
+                        },
+                        "mode": {
+                            "type": "string",
+                            "description": "Режим: calls (вызовы), data_flow (поток данных), cross_service (между сервисами)",
+                            "default": "calls",
+                        },
+                    },
+                    "required": ["function_name"],
+                },
+            },
+            {
+                "name": "github_search_code",
+                "description": "Поиск кода на GitHub. Найди примеры, реализации, баги в репозиториях.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Поисковый запрос (например 'language:Python fastapi auth')",
+                        },
+                        "per_page": {
+                            "type": "integer",
+                            "description": "Результатов на страницу",
+                            "default": 10,
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
+                "name": "github_search_issues",
+                "description": "Поиск issues на GitHub. Найди баги, feature requests, обсуждения.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Поисковый запрос (например 'is:issue label:bug repo:owner/name')",
+                        },
+                        "per_page": {
+                            "type": "integer",
+                            "description": "Результатов на страницу",
+                            "default": 10,
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
         ]
 
     def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -265,6 +452,32 @@ class A2AMCPServer:
             tasks = resp.json().get("tasks", [])
             limit = args.get("limit", 20)
             return json.dumps(tasks[:limit], indent=2, ensure_ascii=False)
+
+        # --- External Tool Handlers ---
+
+        elif name == "web_search":
+            return self._tool_web_search(args)
+
+        elif name == "web_fetch":
+            return self._tool_web_fetch(args)
+
+        elif name == "memory_save":
+            return self._tool_memory_save(args)
+
+        elif name == "memory_search":
+            return self._tool_memory_search(args)
+
+        elif name == "codebase_search":
+            return self._tool_codebase_search(args)
+
+        elif name == "codebase_trace":
+            return self._tool_codebase_trace(args)
+
+        elif name == "github_search_code":
+            return self._tool_github_search_code(args)
+
+        elif name == "github_search_issues":
+            return self._tool_github_search_issues(args)
 
         else:
             return json.dumps({"error": f"Unknown tool: {name}"})

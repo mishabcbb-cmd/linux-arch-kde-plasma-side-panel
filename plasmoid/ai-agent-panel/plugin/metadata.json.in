@@ -15,7 +15,7 @@
     "Id": "org.kde.plasma.ai-agent-panel",
     "License": "GPL-3.0",
     "Name": "AI Agent Panel",
-    "Version": "0.1.0",
+    "Version": "@PROJECT_VERSION@",
     "Website": "https://github.com/kde-ai-agent/kde-ai-agent",
     "BugReportUrl": "https://github.com/kde-ai-agent/kde-ai-agent/issues"
   },

@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse, parse_qs
 
 import yaml
+import httpx
 
 from .models import AgentInfo, AgentRole, AgentStatus, HubConfig, HubTask, TaskState
 from .router import TaskRouter
@@ -40,11 +41,14 @@ class HubHTTPHandler(BaseHTTPRequestHandler):
 
     def _send_json(self, data: Any, status: int = 200) -> None:
         """Отправить JSON ответ."""
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(json.dumps(data, indent=2, ensure_ascii=False, default=str).encode())
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps(data, indent=2, ensure_ascii=False, default=str).encode())
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass
 
     def _read_json(self) -> Optional[Dict]:
         """Прочитать JSON из тела запроса."""
@@ -163,6 +167,36 @@ class HubHTTPHandler(BaseHTTPRequestHandler):
                 else:
                     self._send_json({"error": f"Task '{task_id}' not found"}, 404)
 
+        elif path == "/v1/models":
+            # OpenAI-compatible models list
+            agents = self.hub_server.registry.get_all_agents()
+            models = []
+            for agent in agents:
+                model_id = agent.metadata.get("model_name", agent.name)
+                models.append({
+                    "id": model_id,
+                    "object": "model",
+                    "created": int(agent.last_seen.timestamp()) if agent.last_seen else 0,
+                    "owned_by": "a2a-hub",
+                    "permission": [{
+                        "id": f"modelperm-{agent.name}",
+                        "object": "model_permission",
+                        "created": 0,
+                        "allow_create_engine": False,
+                        "allow_sampling": True,
+                        "allow_logprobs": False,
+                        "allow_search_indices": False,
+                        "allow_view": True,
+                        "allow_fine_tuning": False,
+                        "organization": "*",
+                        "group": None,
+                        "is_blocking": False,
+                    }],
+                    "root": agent.name,
+                    "parent": None,
+                })
+            self._send_json({"object": "list", "data": models})
+
         elif path == "/health":
             self._send_json({
                 "status": "healthy",
@@ -196,6 +230,10 @@ class HubHTTPHandler(BaseHTTPRequestHandler):
 
         elif path == "/context/recall":
             self._handle_recall(data)
+
+        elif path == "/v1/chat/completions":
+            # OpenAI-compatible chat completions endpoint
+            self._handle_openai_chat(data)
 
         elif path == "/conversations/message":
             # POST /conversations/message — добавить сообщение в лог
@@ -379,6 +417,203 @@ class HubHTTPHandler(BaseHTTPRequestHandler):
 
         value = self.hub_server.context_store.recall(data["key"])
         self._send_json({"key": data["key"], "value": value})
+
+    def _handle_openai_chat(self, data: Optional[Dict]) -> None:
+        """OpenAI-compatible /v1/chat/completions endpoint.
+
+        Routes chat requests to the appropriate agent based on the model field.
+        Supports both streaming (SSE) and non-streaming responses.
+        """
+        if not data:
+            self._send_json({"error": "Missing request body"}, 400)
+            return
+
+        # Extract model name → maps to agent name
+        model_name = data.get("model", "")
+        if not model_name:
+            self._send_json({"error": "Missing 'model' field"}, 400)
+            return
+
+        # Find agent by model_name (metadata) or by name
+        agent = self.hub_server.registry.get_agent(model_name)
+        if not agent:
+            # Try matching by metadata model_name
+            for a in self.hub_server.registry.get_all_agents():
+                if a.metadata.get("model_name") == model_name:
+                    agent = a
+                    break
+
+        if not agent:
+            self._send_json({
+                "error": {
+                    "message": f"Model '{model_name}' not found. Available: {[a.name for a in self.hub_server.registry.get_all_agents()]}",
+                    "type": "invalid_request_error",
+                    "code": "model_not_found",
+                }
+            }, 404)
+            return
+
+        if agent.status != AgentStatus.ACTIVE:
+            self._send_json({
+                "error": {
+                    "message": f"Agent '{agent.name}' is {agent.status.value}",
+                    "type": "invalid_request_error",
+                    "code": "agent_unavailable",
+                }
+            }, 503)
+            return
+
+        # Convert OpenAI messages to agent format
+        messages = data.get("messages", [])
+        if not messages:
+            self._send_json({"error": "Missing 'messages' field"}, 400)
+            return
+
+        # Build the prompt from messages
+        system_prompt = ""
+        user_messages = []
+        for msg in messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "system":
+                system_prompt = content
+            elif role == "user":
+                user_messages.append(content)
+            elif role == "assistant":
+                user_messages.append(f"[Assistant]: {content}")
+
+        prompt = "\n\n".join(user_messages)
+        stream = data.get("stream", False)
+
+        # Forward to agent's /message endpoint
+        try:
+            agent_endpoint = agent.endpoint.rstrip("/")
+            forward_data = {
+                "message": prompt,
+                "system_prompt": system_prompt,
+            }
+
+            if stream:
+                # SSE streaming response — эмулируем поток разбивая ответ на чанки
+                import time as _time
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "keep-alive")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+
+                try:
+                    # Сначала получаем полный ответ от агента
+                    with httpx.Client(timeout=120.0) as client:
+                        resp = client.post(f"{agent_endpoint}/message", json=forward_data)
+                        if resp.status_code == 200:
+                            result = resp.json()
+                            response_text = result.get("response", "")
+                            chat_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
+
+                            # Отправляем начальный chunk (role)
+                            start_chunk = {
+                                "id": chat_id,
+                                "object": "chat.completion.chunk",
+                                "created": int(datetime.now().timestamp()),
+                                "model": model_name,
+                                "choices": [{
+                                    "index": 0,
+                                    "delta": {"role": "assistant"},
+                                    "finish_reason": None,
+                                }],
+                            }
+                            self.wfile.write(f"data: {json.dumps(start_chunk, ensure_ascii=False)}\n\n".encode())
+                            self.wfile.flush()
+
+                            # Отправляем ответ целиком для совместимости с клиентами
+                            chunk = {
+                                "id": chat_id,
+                                "object": "chat.completion.chunk",
+                                "created": int(datetime.now().timestamp()),
+                                "model": model_name,
+                                "choices": [{
+                                    "index": 0,
+                                    "delta": {"content": response_text},
+                                    "finish_reason": "stop",
+                                }],
+                            }
+                            self.wfile.write(f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n".encode())
+                            self.wfile.flush()
+                            self.wfile.write(b"data: [DONE]\n\n")
+                            self.wfile.flush()
+                        else:
+                            error_chunk = {"error": f"Agent returned {resp.status_code}: {resp.text}"}
+                            self.wfile.write(f"data: {json.dumps(error_chunk)}\n\n".encode())
+                            self.wfile.write(b"data: [DONE]\n\n")
+                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                    # Клиент закрыл соединение — это нормально для streaming
+                    logger.debug(f"Client disconnected during streaming for {model_name}")
+                except Exception as e:
+                    logger.error(f"Streaming error: {e}")
+                    try:
+                        self.wfile.write(f"data: {json.dumps({'error': str(e)})}\n\n".encode())
+                        self.wfile.write(b"data: [DONE]\n\n")
+                    except Exception:
+                        pass
+            else:
+                # Non-streaming response
+                with httpx.Client(timeout=120.0) as client:
+                    resp = client.post(f"{agent_endpoint}/message", json=forward_data)
+                    if resp.status_code == 200:
+                        result = resp.json()
+                        response_text = result.get("response", "")
+                        openai_response = {
+                            "id": f"chatcmpl-{uuid.uuid4().hex[:8]}",
+                            "object": "chat.completion",
+                            "created": int(datetime.now().timestamp()),
+                            "model": model_name,
+                            "choices": [{
+                                "index": 0,
+                                "message": {
+                                    "role": "assistant",
+                                    "content": response_text,
+                                },
+                                "finish_reason": "stop",
+                            }],
+                            "usage": {
+                                "prompt_tokens": 0,
+                                "completion_tokens": 0,
+                                "total_tokens": 0,
+                            },
+                        }
+                        self._send_json(openai_response)
+                    else:
+                        self._send_json({
+                            "error": {
+                                "message": f"Agent returned {resp.status_code}: {resp.text}",
+                                "type": "server_error",
+                            }
+                        }, resp.status_code)
+
+        except httpx.ConnectError:
+            self._send_json({
+                "error": {
+                    "message": f"Cannot connect to agent '{agent.name}' at {agent.endpoint}",
+                    "type": "server_error",
+                }
+            }, 502)
+        except httpx.TimeoutException:
+            self._send_json({
+                "error": {
+                    "message": f"Agent '{agent.name}' timed out",
+                    "type": "server_error",
+                }
+            }, 504)
+        except Exception as e:
+            logger.error(f"OpenAI chat error: {e}")
+            self._send_json({
+                "error": {
+                    "message": str(e),
+                    "type": "server_error",
+                }
+            }, 500)
 
     # --- Helpers ---
 

@@ -20,6 +20,34 @@ use commands::AgentState;
 pub fn run() {
     env_logger::init();
 
+    // ── NVIDIA + Wayland workaround ──────────────────
+    // Auto-detect NVIDIA GPU on Wayland and apply env vars before
+    // WebKitGTK initializes. Must be done before tauri::Builder.
+    // See: docs/tauri-nvidia-wayland-research.md
+    #[cfg(target_os = "linux")]
+    {
+        let is_wayland = std::env::var("XDG_SESSION_TYPE")
+            .map(|s| s == "wayland")
+            .unwrap_or(false)
+            || std::env::var("WAYLAND_DISPLAY").is_ok();
+        let has_nvidia = std::path::Path::new("/proc/driver/nvidia/version").exists();
+
+        if is_wayland && has_nvidia {
+            if std::env::var_os("__NV_DISABLE_EXPLICIT_SYNC").is_none() {
+                std::env::set_var("__NV_DISABLE_EXPLICIT_SYNC", "1");
+                log::info!("NVIDIA + Wayland: set __NV_DISABLE_EXPLICIT_SYNC=1");
+            }
+            if std::env::var_os("GSK_RENDERER").is_none() {
+                std::env::set_var("GSK_RENDERER", "ngl");
+                log::info!("NVIDIA + Wayland: set GSK_RENDERER=ngl");
+            }
+            if std::env::var_os("NVD_BACKEND").is_none() {
+                std::env::set_var("NVD_BACKEND", "direct");
+                log::info!("NVIDIA + Wayland: set NVD_BACKEND=direct");
+            }
+        }
+    }
+
     let agent_state = AgentState::new();
 
     tauri::Builder::default()

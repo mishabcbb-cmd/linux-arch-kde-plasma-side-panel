@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=A2A Hub Configurator
+Comment=Configure and manage A2A Hub agents and services
+Exec=python3 /home/neo/ecosystem/linux-arch-kde-plasma-side-panel/a2a_hub/configurator.py
+Icon=preferences-system-network
+Terminal=false
+Categories=System;Settings;Network;
+Keywords=a2a;hub;agent;ai;configurator;

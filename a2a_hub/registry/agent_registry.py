@@ -46,6 +46,9 @@ class AgentRegistry:
             config = yaml.safe_load(f)
 
         for agent_data in config.get("agents", []):
+            metadata = agent_data.get("metadata", {})
+            if "model_name" in agent_data:
+                metadata["model_name"] = agent_data["model_name"]
             agent = AgentInfo(
                 name=agent_data["name"],
                 description=agent_data["description"],
@@ -56,6 +59,7 @@ class AgentRegistry:
                 auth_type=agent_data.get("auth_type", "none"),
                 status=AgentStatus.ACTIVE if agent_data.get("status") == "active" else AgentStatus.INACTIVE,
                 last_seen=datetime.now(),
+                metadata=metadata,
             )
             self._agents[agent.name] = agent
             logger.info(f"Loaded agent from config: {agent.name}")

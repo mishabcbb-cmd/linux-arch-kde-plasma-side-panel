@@ -181,7 +181,7 @@ export default function App() {
           log.debug("Unhandled D-Bus signal:", signalType, msg);
       }
     },
-    [setConnected, setStatus, addMessage, appendToken, refreshStatus]
+    [setConnected, setStatus, addMessage, appendToken]
   );
 
   // ── Refresh agent status via Tauri command ──

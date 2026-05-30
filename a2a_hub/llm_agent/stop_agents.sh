@@ -9,7 +9,7 @@ if [ -f /tmp/a2a-agents.pids ]; then
     echo "All agents stopped."
 else
     echo "No agents PID file found. Stopping by port..."
-    for port in 8091 8092 8093; do
+    for port in 8091 8092 8093 8094; do
         pid=$(lsof -ti :$port 2>/dev/null)
         if [ -n "$pid" ]; then
             kill $pid 2>/dev/null

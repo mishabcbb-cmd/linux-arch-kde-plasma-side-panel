@@ -1,5 +1,5 @@
 {
-  "KPackageStructure": "Plasma/Applet",
+  "KPackageStructure": "Plasma/Containment",
   "KPlugin": {
     "Authors": [
       {
@@ -10,7 +10,7 @@
     "Category": "Utilities",
     "Copyright": "2026 KDE AI Agent Contributors",
     "Description": "AI coding agent side panel for KDE Plasma 6 desktop.",
-    "FormFactors": ["desktop"],
+    "FormFactors": ["desktop", "panel"],
     "Icon": "assistant",
     "Id": "org.kde.plasma.ai-agent-panel",
     "License": "GPL-3.0",
@@ -19,5 +19,6 @@
     "Website": "https://github.com/kde-ai-agent/kde-ai-agent",
     "BugReportUrl": "https://github.com/kde-ai-agent/kde-ai-agent/issues"
   },
-  "X-Plasma-API-Minimum-Version": "6.0"
+  "X-Plasma-API-Minimum-Version": "6.0",
+  "X-Plasma-ContainmentType": "Panel"
 }

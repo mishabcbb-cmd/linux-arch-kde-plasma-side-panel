@@ -96,3 +96,5 @@ config/secrets.yaml
 *.gguf
 *.bin
 *.safetensors
+plugin/build/
+plugin/metadata.json
