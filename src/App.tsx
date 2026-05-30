@@ -31,6 +31,8 @@ export default function App() {
   const addContextFile = useAgentStore((s) => s.addContextFile);
   const fileTreeOpen = useAgentStore((s) => s.fileTreeOpen);
   const setFileTreeOpen = useAgentStore((s) => s.setFileTreeOpen);
+  const panelVisible = useAgentStore((s) => s.panelVisible);
+  const setPanelVisible = useAgentStore((s) => s.setPanelVisible);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
@@ -101,6 +103,16 @@ export default function App() {
     catch (e) { log.warn("Response failed:", e); }
   }, [addMessage]);
 
+  const handleTogglePanel = useCallback(async () => {
+    const newVisible = !panelVisible;
+    setPanelVisible(newVisible);
+    try {
+      await invoke<CommandResponse>("slide_panel", { visible: newVisible });
+    } catch (e) {
+      log.warn("slide_panel failed:", e);
+    }
+  }, [panelVisible, setPanelVisible]);
+
   const handleFilesSelected = useCallback((paths: string[]) => {
     for (const p of paths) addContextFile(p);
     setFileTreeOpen(false);
@@ -122,7 +134,7 @@ export default function App() {
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
-          <button className="icon-btn" aria-label="Close" title="Close">
+          <button className="icon-btn" aria-label="Close" title="Close" onClick={handleTogglePanel}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>

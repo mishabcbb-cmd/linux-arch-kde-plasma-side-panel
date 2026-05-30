@@ -27,6 +27,7 @@ export const useAgentStore = create<AgentState>((set) => ({
   history: [],
   loadingFiles: false,
   fileTreeOpen: false,
+  panelVisible: true,
 
   // ── Connection ──
   setConnected: (v) => set({ connected: v }),
@@ -112,4 +113,6 @@ export const useAgentStore = create<AgentState>((set) => ({
 
   // ── UI ──
   setFileTreeOpen: (open) => set({ fileTreeOpen: open }),
+  setPanelVisible: (visible) => set({ panelVisible: visible }),
+  togglePanel: () => set((state) => ({ panelVisible: !state.panelVisible })),
 }));

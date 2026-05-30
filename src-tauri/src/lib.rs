@@ -15,6 +15,9 @@ mod dbus_listener;
 mod layer_shell;
 
 use commands::AgentState;
+use tauri::Manager;
+use tauri::Listener;
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -60,6 +63,9 @@ pub fn run() {
             commands::provide_response,
             commands::check_agent_connected,
             commands::cleanup_stale_listeners,
+            commands::slide_panel,
+            commands::toggle_panel_slide,
+            commands::position_panel_left,
         ])
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_autostart::init(
@@ -81,7 +87,6 @@ pub fn run() {
                 .output();
 
             // ── 1. Start D-Bus signal listener (Python subprocess) ──
-            // Agent service runs from ~/.local/share/kde-ai-agent/agent/ (systemd)
             let agent_dir = dirs::home_dir()
                 .map(|d| d.join(".local/share/kde-ai-agent/agent"))
                 .and_then(|p| p.to_str().map(String::from))
@@ -92,10 +97,36 @@ pub fn run() {
             dbus_listener::spawn_dbus_listener(app_handle.clone(), agent_dir);
             log::info!("D-Bus signal listener (Python subprocess) started");
 
-            // ── 2. LayerShell disabled for initial Wayland test ──
-            // LayerShell requires a separate Wayland connection which conflicts
-            // with Tauri's GTK Wayland backend. Re-enable after investigating
-            // gtk4-layer-shell integration or KWin native panel protocol.
+            // ── 2. Position window on left edge after window is created ──
+            let app_handle_clone = app.handle().clone();
+            app.listen("tauri://window-created", move |_| {
+                log::info!("Window created event received");
+                let app_handle_inner = app_handle_clone.clone();
+                tauri::async_runtime::spawn(async move {
+                    // Small delay to let the window fully initialize
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    let _ = commands::position_panel_left().await;
+                });
+            });
+
+            // ── 3. Register Super+A global shortcut for toggle ──
+            {
+                app.handle()
+                    .global_shortcut()
+                    .on_shortcut("Super+A", move |app, _shortcut, _event| {
+                        log::info!("Super+A pressed!");
+                        tauri::async_runtime::spawn(async move {
+                            let _ = commands::toggle_panel_slide().await;
+                        });
+                    })
+                    .map_err(|e| {
+                        log::error!("Failed to register Super+A shortcut: {}", e);
+                        e
+                    })?;
+                log::info!("Global shortcut Super+A registered");
+            }
+
+            // ── 4. LayerShell disabled ──
             log::info!("LayerShell: disabled for initial Wayland test");
 
             Ok(())

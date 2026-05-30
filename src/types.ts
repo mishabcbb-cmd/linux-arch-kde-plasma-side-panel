@@ -62,6 +62,7 @@ export interface AgentState {
   history: string[];
   loadingFiles: boolean;
   fileTreeOpen: boolean;
+  panelVisible: boolean;
 
   setConnected: (v: boolean) => void;
   setStatus: (s: AgentStatus) => void;
@@ -79,4 +80,6 @@ export interface AgentState {
   goBack: () => void;
   setFileTreeOpen: (open: boolean) => void;
   setLoadingFiles: (loading: boolean) => void;
+  setPanelVisible: (visible: boolean) => void;
+  togglePanel: () => void;
 }

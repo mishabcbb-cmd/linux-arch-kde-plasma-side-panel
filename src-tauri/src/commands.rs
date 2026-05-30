@@ -13,7 +13,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::State;
+use std::time::Duration;
+use tauri::{Manager, State};
 
 // Keep greet for backward compatibility
 #[tauri::command]
@@ -273,5 +274,115 @@ pub async fn cleanup_stale_listeners() -> Result<CommandResponse, String> {
         } else {
             "No stale dbus_listener.py processes found".to_string()
         },
+    })
+}
+
+/// Position/move the panel window using KWin D-Bus scripting (works on Wayland).
+/// Falls back to set_position on X11.
+#[tauri::command]
+pub async fn slide_panel(
+    visible: bool,
+) -> Result<CommandResponse, String> {
+    const PANEL_WIDTH: i32 = 400;
+    const DURATION_MS: u64 = 250;
+    const FPS: i32 = 60;
+
+    let start_x = if visible { -PANEL_WIDTH } else { 0 };
+    let end_x = if visible { 0 } else { -PANEL_WIDTH };
+
+    // Try KWin D-Bus first (Wayland)
+    let kwin_script = dirs::home_dir()
+        .map(|d| d.join("ecosystem/linux-arch-kde-plasma-side-panel/a2a_hub/kwin_window.py"))
+        .and_then(|p| p.to_str().map(String::from))
+        .unwrap_or_else(|| "/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/a2a_hub/kwin_window.py".to_string());
+
+    let output = tokio::process::Command::new("python3")
+        .arg(&kwin_script)
+        .arg("slide")
+        .arg("ai-agent-panel")  // window class
+        .arg(start_x.to_string())
+        .arg(end_x.to_string())
+        .arg("0")  // y
+        .arg(PANEL_WIDTH.to_string())
+        .arg("0")  // height (0 = don't change)
+        .arg(DURATION_MS.to_string())
+        .arg(FPS.to_string())
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run kwin_window.py: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if !output.status.success() {
+        log::warn!("kwin_window.py failed: {} {}", stdout, stderr);
+        return Err(format!("KWin script failed: {}", stderr));
+    }
+
+    log::info!("slide_panel: {}", stdout.trim());
+
+    Ok(CommandResponse {
+        success: true,
+        message: if visible {
+            "Panel slid in".to_string()
+        } else {
+            "Panel slid out".to_string()
+        },
+    })
+}
+
+/// Toggle panel visibility with slide animation via KWin.
+#[tauri::command]
+pub async fn toggle_panel_slide() -> Result<CommandResponse, String> {
+    // We track visibility via a simple file-based state
+    let state_file = std::env::temp_dir().join("ai-agent-panel-visible");
+    let visible = if state_file.exists() {
+        let content = std::fs::read_to_string(&state_file).unwrap_or_else(|_| "true".to_string());
+        content.trim() == "true"
+    } else {
+        true // default: visible
+    };
+
+    let new_visible = !visible;
+    std::fs::write(&state_file, if new_visible { "true" } else { "false" })
+        .map_err(|e| format!("Failed to write state: {}", e))?;
+
+    slide_panel(new_visible).await
+}
+
+/// Position the panel window on the left edge of the screen (call on startup).
+#[tauri::command]
+pub async fn position_panel_left() -> Result<CommandResponse, String> {
+    let kwin_script = dirs::home_dir()
+        .map(|d| d.join("ecosystem/linux-arch-kde-plasma-side-panel/a2a_hub/kwin_window.py"))
+        .and_then(|p| p.to_str().map(String::from))
+        .unwrap_or_else(|| "/home/neo/ecosystem/linux-arch-kde-plasma-side-panel/a2a_hub/kwin_window.py".to_string());
+
+    // Get screen height
+    let output = tokio::process::Command::new("python3")
+        .arg(&kwin_script)
+        .arg("position")
+        .arg("ai-agent-panel")
+        .arg("0")  // x
+        .arg("0")  // y
+        .arg("400")  // width
+        .arg("0")  // height (0 = don't change)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run kwin_window.py: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if !output.status.success() {
+        log::warn!("kwin_window.py position failed: {} {}", stdout, stderr);
+        return Err(format!("KWin position script failed: {}", stderr));
+    }
+
+    log::info!("position_panel_left: {}", stdout.trim());
+
+    Ok(CommandResponse {
+        success: true,
+        message: "Panel positioned at left edge".to_string(),
     })
 }
