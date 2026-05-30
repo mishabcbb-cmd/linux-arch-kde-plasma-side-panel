@@ -1,9 +1,0 @@
-{
-  "id": "891c332139d52564",
-  "tool": "ctx_shell",
-  "command": "curl -s --connect-timeout 3 http://127.0.0.1:8080/health 2>&1 || echo \"SearXNG not reachable on port 8080\"",
-  "size_chars": 4761,
-  "size_tokens": 2259,
-  "created_at": "2026-05-25T21:59:14.216130205Z",
-  "session_id": "20260525-173236-523764s0"
-}

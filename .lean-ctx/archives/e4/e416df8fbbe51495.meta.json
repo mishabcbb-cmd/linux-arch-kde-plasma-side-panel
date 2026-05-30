@@ -1,9 +1,0 @@
-{
-  "id": "e416df8fbbe51495",
-  "tool": "ctx_shell",
-  "command": "curl -s --connect-timeout 5 -X POST http://127.0.0.1:8080/search -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"q\": \"KDE Plasma side panel widget\", \"format\": \"json\", \"engines\": [\"github\", \"google\", \"duckduckg\"], \"language\": \"en\"}' 2>&1 | head -50",
-  "size_chars": 6308,
-  "size_tokens": 2742,
-  "created_at": "2026-05-25T22:04:52.216886750Z",
-  "session_id": "20260525-173236-523764s0"
-}

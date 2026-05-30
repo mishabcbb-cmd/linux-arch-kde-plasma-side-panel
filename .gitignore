@@ -86,6 +86,22 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
+# User dotfiles — should not be in repo
+.bash_logout
+.bash_profile
+.bashenv
+.bashrc
+.bashrc.lean-ctx.bak
+.lean-ctx.toml
+.roomodes
+.lean-ctx
+
+# Project-specific files that shouldn't be committed
+compressed-prompt.md
+UI_REDESIGN_PROMPT.md
+ai_messenger_layout.html
+ai_messenger_layout_v2.html
+
 # Secrets — never commit
 *.pem
 *.key
